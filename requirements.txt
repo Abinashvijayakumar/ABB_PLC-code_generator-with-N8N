@@ -1,0 +1,14 @@
+# Core Requirements for PLC AI Generator
+
+# For the User Interface
+streamlit==1.32.2 [cite: 398]
+
+# For Google Gemini API communication
+google-generativeai
+
+# For loading environment variables (API keys)
+python-dotenv
+
+# Vector Database for RAG (Must-Have for Day 2)
+chromadb==0.4.24 [cite: 393]
+sentence-transformers==2.5.1 [cite: 395]
