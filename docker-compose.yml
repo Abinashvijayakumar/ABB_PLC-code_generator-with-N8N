@@ -1,0 +1,17 @@
+# docker-compose.yml
+version: '3.7'
+
+services:
+  n8n:
+    image: n8nio/n8n
+    container_name: n8n_plc_generator
+    restart: always
+    ports:
+      - "5678:5678"
+    environment:
+      - GENERIC_TIMEZONE=Asia/Kolkata
+    volumes:
+      - ./n8n_data:/home/node/.n8n
+
+volumes:
+  n8n_data:
