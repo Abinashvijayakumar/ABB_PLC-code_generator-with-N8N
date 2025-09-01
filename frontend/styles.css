@@ -484,32 +484,45 @@ body {
     display: flex;
     justify-content: flex-end;
 }
+/* All of your existing, excellent CSS content goes here */
+/* ... */
+/* ... (Ensure all original rules are present) ... */
+/* ... */
 
-.dialog-footer {
-    padding: var(--spacing-md);
-    border-top: 1px solid var(--border-color);
+/* --- APPENDED STYLES FOR THE NEW UI --- */
+.input-controls {
     display: flex;
     justify-content: flex-end;
+    gap: var(--spacing-sm); /* Add gap for multiple buttons */
 }
 
-/* --- APPENDED STYLES FOR NEW OUTPUT BLOCKS --- */
-
 .code-container {
-    flex: 1;
-    overflow: auto;
-    background-color: var(--card-bg);
-    border-radius: var(--border-radius-md);
-    border: 1px solid var(--border-color);
-    box-shadow: var(--shadow-sm);
+    position: relative;
+    display: flex;
+    flex-direction: column;
     padding: var(--spacing-md);
+}
+
+.placeholder-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    color: var(--text-muted);
+    transition: opacity 0.3s ease;
+}
+
+.placeholder-text i {
+    font-size: 3rem;
+    margin-bottom: var(--spacing-md);
 }
 
 .output-block {
-    margin-bottom: 1.5rem;
-    padding-bottom: 1rem;
+    margin-bottom: 1rem;
     border-bottom: 1px solid var(--border-color);
+    padding-bottom: 1rem;
 }
-
 .output-block:last-child {
     border-bottom: none;
     margin-bottom: 0;
@@ -526,7 +539,7 @@ body {
 }
 
 .output-block pre {
-    background-color: var(--bg-color);
+    background-color: #fdfdfd;
     padding: 0.75rem;
     border-radius: var(--border-radius-sm);
     white-space: pre-wrap;
@@ -534,33 +547,36 @@ body {
     font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
     font-size: 0.9rem;
     color: var(--text-primary);
+    border: 1px solid var(--border-color);
 }
 
-.output-block p {
-    color: var(--text-secondary);
-    font-size: 0.95rem;
+#optimization-output {
+    background-color: #e6f6e6; /* Highlight optimized code */
 }
 
-.typing-indicator p {
+
+.verification-status {
     display: flex;
     align-items: center;
+    padding: var(--spacing-md);
+    border-radius: var(--border-radius-sm);
+    font-weight: 500;
+}
+.verification-status.success {
+    background-color: #e6f6e6;
+    color: var(--success-color);
+    border: 1px solid var(--success-color);
+}
+.verification-status.error {
+    background-color: #fdeaea;
+    color: var(--error-color);
+    border: 1px solid var(--error-color);
+}
+.verification-status i {
+    margin-right: var(--spacing-sm);
+}
+.hidden {
+    display: none !important;
 }
 
-.typing-indicator span {
-    height: 8px;
-    width: 8px;
-    background: #fff;
-    border-radius: 50%;
-    display: inline-block;
-    margin: 0 2px;
-    animation: bounce 1.5s infinite ease-in-out;
-}
-
-.typing-indicator span:nth-child(1) { animation-delay: 0s; }
-.typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
-.typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
-
-@keyframes bounce {
-    0%, 60%, 100% { transform: translateY(0); }
-    30% { transform: translateY(-5px); }
-}
+/* End of appended styles */
