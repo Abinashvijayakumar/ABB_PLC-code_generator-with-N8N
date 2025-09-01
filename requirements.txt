@@ -12,3 +12,6 @@ python-dotenv
 # Vector Database for RAG (Must-Have for Day 2)
 chromadb==0.4.24
 sentence-transformers==2.5.1
+
+# fastAPi
+fastapi[all]
