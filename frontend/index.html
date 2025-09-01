@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prompt to PLC - AI Software</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <!-- Header Section -->
+        <header class="header">
+            <div class="logo">
+                <h1>Prompt to PLC</h1>
+            </div>
+            <div class="header-controls">
+                <button class="btn btn-secondary"><i class="fas fa-cog"></i> Settings</button>
+                <button class="btn btn-primary"><i class="fas fa-question-circle"></i> Help</button>
+            </div>
+        </header>
+
+        <!-- Main Content Area with Split Screen -->
+        <main class="main-content">
+            <!-- Left Side - Prompt Input -->
+            <section class="prompt-section">
+                <div class="section-header">
+                    <h2>Prompt Input</h2>
+                    <div class="section-controls">
+                        <button class="btn btn-small" title="Clear Prompt"><i class="fas fa-trash"></i></button>
+                        <button class="btn btn-small" id="uploadPLCBtn" title="Upload PLC Program"><i class="fas fa-file-upload"></i> Upload PLC</button>
+                        <button class="btn btn-small" title="Rewrite Options"><i class="fas fa-sync-alt"></i></button>
+                    </div>
+                </div>
+                <div class="chat-container">
+                    <div class="chat-messages" id="chatMessages">
+                        <!-- Messages will be added here dynamically -->
+                        <div class="system-message">
+                            <p>Welcome to Prompt to PLC! Describe your PLC requirements, and I'll generate structured text code for you.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="chat-input-container">
+                        <textarea id="promptInput" placeholder="Describe your PLC requirements here..."></textarea>
+                        <div class="input-controls">
+                            <button class="btn btn-icon" title="Attach File"><i class="fas fa-paperclip"></i></button>
+                            <button class="btn btn-primary" id="sendPrompt"><i class="fas fa-paper-plane"></i> Send</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Right Side - Generated Code Output -->
+            <section class="output-section">
+                <div class="section-header">
+                    <h2 id="outputTitle">Generated Output</h2>
+                    <div class="section-controls">
+                        <select id="formatSelector" class="format-selector">
+                            <option value="st">Structured Text</option>
+                            <option value="ladder">Ladder Logic</option>
+                        </select>
+                        <button class="btn btn-small" title="Copy Code"><i class="fas fa-copy"></i></button>
+                        <button class="btn btn-small" id="downloadBtn" title="Download Code"><i class="fas fa-download"></i> Download</button>
+                        <button class="btn btn-small" title="Validate Code"><i class="fas fa-check-circle"></i></button>
+                    </div>
+                </div>
+                <div class="code-container">
+                    <pre id="codeOutput" class="code-output"><code>// Generated structured text will appear here</code></pre>
+                </div>
+               
+                <div class="output-controls">
+                    <button class="btn btn-secondary" id="debugBtn"><i class="fas fa-bug"></i> Debug Program</button>
+                    <button class="btn btn-secondary"><i class="fas fa-code-branch"></i> Version History</button>
+                    <button class="btn btn-primary"><i class="fas fa-play"></i> Simulate</button>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer Section -->
+        <footer class="footer">
+            <p>&copy; 2023 Prompt to PLC. All rights reserved.</p>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
