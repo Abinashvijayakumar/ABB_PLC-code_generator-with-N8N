@@ -1,50 +1,48 @@
-# Install Core Tools:
-Git: Version control is non-negotiable.
-VS Code: Your primary Integrated Development Environment (IDE). Install the official Python, Docker, and GitLens extensions.
-Python: Install version 3.10+. Ensure it's added to your system's PATH.
-Docker Desktop: Essential for containerization, a "Must-Have" requirement.
-n8n Desktop App: For local workflow development and testing.
+Clone the Repo: git clone <your-repo-url>
 
-## Team Collaboration & Repository Setup (Lead Architect)
-Create GitHub Repository:
-Initialize it with a Python 
-.gitignore file, a README.md, and an empty requirements.txt.
-Create the primary branches: 
-main and develop.
-Set a branch protection rule on 
-main to require at least one pull request review before merging. This prevents accidental mistakes. All work will be done on feature branches and merged into
-develop first.
+Switch to the Develop Branch: git checkout develop
 
-### File Structure Setup (Lead Architect)
-This structure is based on professional best practices and the provided documents. The Lead Architect will create this initial folder structure and push it to the develop branch.
+Create the Project Structure: Collectively create the initial folders and blank files so everyone is working from the same blueprint.
 
-/abb-plc-ai-generator
-|
-|-- /.github/           # For GitHub Actions (CI/CD later)
-|-- /backend/
-|   |-- /scripts/
-|   |   |-- verify_st.py        # Python script for MATIEC verification [cite: 199]
-|   |   |-- review_logic.py     # Python script for LLM self-correction
-|   |   |-- generate_ld.py      # Python script for Ladder Logic generation [cite: 200]
-|   |-- /rag_kb/              # Knowledge base for RAG [cite: 202, 223]
-|   |   |-- start_stop_circuit.md
-|   |   |-- ...
-|
-|-- /frontend/
-|   |-- app.py                # Main Streamlit application file [cite: 224]
-|
-|-- /docs/                  # For presentation and project documents [cite: 207]
+abb-plc-ai-copilot/
+|-- backend/
+|   |-- scripts/
+|   |   |-- verify_st.py
+|   |-- main.py                 # For FastAPI later
+|   |-- verification_service.py # For Phase 1
+|   |-- rag_service.py          # For Phase 1
+|-- frontend/
+|   |-- index.html
+|   |-- style.css
+|   |-- app.js
+|-- rag_kb/
+|   |-- example1.md
 |-- .gitignore
-|-- Dockerfile              # To containerize the entire application [cite: 101, 248]
-|-- docker-compose.yml      # To manage multi-container setups [cite: 213]
-|-- README.md               # Project documentation [cite: 136, 253]
-|-- requirements.txt        # Python dependencies [cite: 56, 203]
+|-- requirements.txt
+|-- README.md
+Setup Python Environment:
 
-#### Cloud Services & API Keys (Lead Architect)
-Obtain API Keys:
-Create an account on the 
-Google AI Platform and generate an API key for the Gemini models. This will be our primary choice.
-Create a backup account on 
-OpenAI.
-Secure Key Management:
-Use a password manager or a secure method to share keys with the team. 
+Run python -m venv venv in the root directory.
+
+Activate it: source venv/bin/activate (or .\venv\Scripts\activate on Windows).
+
+Populate requirements.txt with the essentials for now. Copy-paste this in:
+
+# Core FastAPI for services
+fastapi
+uvicorn[standard]
+
+# LLM SDK
+google-generativeai
+python-dotenv
+
+# RAG / Vector Store
+chromadb
+langchain
+sentence-transformers
+
+# For making requests between services
+requests
+Install them: pip install -r requirements.txt
+
+Once this is done, you have a clean, professional workspace ready for tomorrow. Push the initial file structure to the develop branch.
