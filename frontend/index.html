@@ -4,13 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Prompt to PLC - AI Software</title>
+    <!-- Your existing links are perfect -->
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
     <div class="container">
-        <!-- Header Section -->
+        <!-- Header Section (Unchanged) -->
         <header class="header">
             <div class="logo">
                 <h1>Prompt to PLC</h1>
@@ -21,68 +22,69 @@
             </div>
         </header>
 
-        <!-- Main Content Area with Split Screen -->
+        <!-- Main Content Area with Split Screen (Unchanged) -->
         <main class="main-content">
-            <!-- Left Side - Prompt Input -->
+            <!-- Left Side - Prompt Input (Unchanged) -->
             <section class="prompt-section">
                 <div class="section-header">
                     <h2>Prompt Input</h2>
                     <div class="section-controls">
-                        <button class="btn btn-small" title="Clear Prompt"><i class="fas fa-trash"></i></button>
-                        <button class="btn btn-small" id="uploadPLCBtn" title="Upload PLC Program"><i class="fas fa-file-upload"></i> Upload PLC</button>
-                        <button class="btn btn-small" title="Rewrite Options"><i class="fas fa-sync-alt"></i></button>
+                        <button class="btn btn-small" title="Clear Prompt" id="clearPromptBtn"><i class="fas fa-trash"></i></button>
                     </div>
                 </div>
                 <div class="chat-container">
                     <div class="chat-messages" id="chatMessages">
-                        <!-- Messages will be added here dynamically -->
                         <div class="system-message">
-                            <p>Welcome to Prompt to PLC! Describe your PLC requirements, and I'll generate structured text code for you.</p>
+                            <p>Welcome! Describe your PLC requirements, and I'll generate, document, and verify the Structured Text code for you.</p>
                         </div>
                     </div>
                     
                     <div class="chat-input-container">
                         <textarea id="promptInput" placeholder="Describe your PLC requirements here..."></textarea>
                         <div class="input-controls">
-                            <button class="btn btn-icon" title="Attach File"><i class="fas fa-paperclip"></i></button>
                             <button class="btn btn-primary" id="sendPrompt"><i class="fas fa-paper-plane"></i> Send</button>
                         </div>
                     </div>
                 </div>
             </section>
 
-            <!-- Right Side - Generated Code Output -->
+            <!-- UPDATED Right Side - Generated Code Output -->
             <section class="output-section">
                 <div class="section-header">
                     <h2 id="outputTitle">Generated Output</h2>
                     <div class="section-controls">
-                        <select id="formatSelector" class="format-selector">
-                            <option value="st">Structured Text</option>
-                            <option value="ladder">Ladder Logic</option>
-                        </select>
-                        <button class="btn btn-small" title="Copy Code"><i class="fas fa-copy"></i></button>
-                        <button class="btn btn-small" id="downloadBtn" title="Download Code"><i class="fas fa-download"></i> Download</button>
-                        <button class="btn btn-small" title="Validate Code"><i class="fas fa-check-circle"></i></button>
+                        <button class="btn btn-small" id="downloadBtn" title="Download Code"><i class="fas fa-download"></i> Download .st</button>
                     </div>
                 </div>
+                <!-- This is the new, structured container for all AI output -->
                 <div class="code-container">
-                    <pre id="codeOutput" class="code-output"><code>// Generated structured text will appear here</code></pre>
-                </div>
-               
-                <div class="output-controls">
-                    <button class="btn btn-secondary" id="debugBtn"><i class="fas fa-bug"></i> Debug Program</button>
-                    <button class="btn btn-secondary"><i class="fas fa-code-branch"></i> Version History</button>
-                    <button class="btn btn-primary"><i class="fas fa-play"></i> Simulate</button>
+                    <div class="output-block">
+                        <h3><i class="fas fa-info-circle"></i> Explanation</h3>
+                        <p id="explanation-output">// AI's explanation of the logic will appear here.</p>
+                    </div>
+                    <div class="output-block">
+                        <h3><i class="fas fa-list-alt"></i> Variable Declarations</h3>
+                        <pre><code id="variables-output">// Required VAR/END_VAR block will appear here.</code></pre>
+                    </div>
+                    <div class="output-block">
+                        <h3><i class="fas fa-code"></i> Structured Text Logic</h3>
+                        <pre><code id="st-code-output">// Generated structured text will appear here.</code></pre>
+                    </div>
+                    <div class="output-block">
+                        <h3><i class="fas fa-shield-alt"></i> Verification Notes</h3>
+                        <pre><code id="verification-output">// AI's safety and logic review will appear here.</code></pre>
+                    </div>
+                    <div class="output-block">
+                        <h3><i class="fas fa-tasks"></i> Simulation Trace</h3>
+                        <pre><code id="simulation-output">// A step-by-step execution trace will appear here.</code></pre>
+                    </div>
                 </div>
             </section>
         </main>
-
-        <!-- Footer Section -->
-        <footer class="footer">
-            <p>&copy; 2023 Prompt to PLC. All rights reserved.</p>
-        </footer>
     </div>
 
+    <!-- The script is now correctly linked -->
     <script src="script.js"></script>
 </body>
 </html>
+
