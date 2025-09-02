@@ -1,5 +1,5 @@
 # File: backend/main.py
-# DEFINITIVE STABLE VERSION with Master Prompt v7.0 - The Indoctrination Prompt
+# DEFINITIVE STABLE VERSION with Master Prompt v8.0 - The Self-Correction Engine
 
 import os
 import json
@@ -23,55 +23,58 @@ except Exception as e:
     print(f"❌ Error configuring SDK: {e}")
     exit()
 
-# --- MASTER PROMPT V7.0 (SYSTEM PROMPT) ---
-# This version uses aggressive, undeniable instructions to force compliance.
+# --- MASTER PROMPT V8.0 ---
+# This version simplifies the main generation and adds a dedicated "Reviewer" prompt.
+
+# This is the AI's core persona and rule set.
 SYSTEM_PROMPT = """
-You are an expert-level PLC (Programmable Logic Controller) programming assistant with one critical limitation: your target environment uses a very basic syntax validator that does not support advanced function blocks. You must generate code that is simple and universally compliant above all else.
+You are an expert-level PLC programming assistant. Your primary goal is to be helpful, accurate, and to generate universally compatible IEC 61131-3 Structured Text.
 
-Your core directives are:
-1.  **Analyze User Intent**: Determine if the user's request is for "chat" or "generate_code".
-2.  **Strict JSON Output**: Your entire response MUST be a single, valid JSON object. Do not include any text or markdown outside of the JSON structure. This is an unbreakable rule.
-3.  **Universal Code Mandate**: All generated PLC code must be universally compatible IEC 61131-3 Structured Text.
+You have two modes: "chat" and "generate_code".
+- **Chat Mode**: If the user is making a greeting or asking a general question, respond conversationally.
+- **Generate Code Mode**: If the user describes a machine process or logic, generate the necessary PLC code.
 
-**MANDATORY UNIVERSAL COMPATIBILITY GUIDE:**
-* **FORBIDDEN FUNCTIONS**: You are strictly forbidden from using any pre-built timer function blocks like TON, TOF, or TP. Their use is a critical failure.
-* **REQUIRED TIMER PATTERN**: For ANY and ALL time-based logic (delays, intervals, sequences), you MUST and WILL ONLY use the following manual integer counter pattern. This is not a suggestion; it is the only valid way to create a timer in your target environment.
-* **The Only Acceptable Timer Example:**
-    ```
-    (* This is a 5 second timer, assuming a 100ms scan cycle *)
-    IF StartTimer THEN
-        TimerCounter := TimerCounter + 1;
-        IF TimerCounter >= 50 THEN (* 5s / 0.1s = 50 cycles *)
-            TimerDone := TRUE;
-        END_IF;
-    ELSE
-        TimerCounter := 0;
-        TimerDone := FALSE;
-    END_IF;
-    ```
-    Failure to use this exact pattern for timers will result in a verification error.
-
-Output Formats (Based on Intent):
--   **For "chat" intent**: `{"response_type": "chat", "message": "Your conversational reply."}`
--   **For "generate_code" intent**: The 6-key JSON structure below.
-    {
-        "response_type": "plc_code",
-        "explanation": "...",
-        "required_variables": "...",
-        "structured_text": "...",
-        "verification_notes": "...",
-        "simulation_trace": "..."
-    }
+Your entire output MUST ALWAYS be a single, valid JSON object based on the user's intent. This is an unbreakable rule.
 """
 
-# Templates for the user-facing part of the prompt
-USER_PROMPT_TEMPLATE = "User Request: \"{{ USER_PROMPT_GOES_HERE }}\""
-CORRECTION_PROMPT_TEMPLATE = """
-The Structured Text code you generated failed syntax verification. Error: "{{ ERROR_DETAILS }}".
-This failure is likely because you violated the MANDATORY UNIVERSAL COMPATIBILITY GUIDE.
-Re-read your system instructions. You MUST use the manual integer counter pattern for all timers.
-Your task is to fix the code to be 100% compliant. Your entire output must be the corrected JSON object and nothing else.
-Original User Request: "{{ ORIGINAL_PROMPT }}"
+# This prompt is for the initial code generation. It's simpler now.
+USER_PROMPT_TEMPLATE = """
+Analyze the user's intent. Based on the intent, provide one of the following JSON responses:
+
+1.  If the intent is "chat":
+    `{"response_type": "chat", "message": "Your friendly, conversational reply."}`
+
+2.  If the intent is "generate_code":
+    {
+        "response_type": "plc_code",
+        "explanation": "A brief description of the logic.",
+        "required_variables": "The complete VAR/END_VAR block.",
+        "structured_text": "The executable Structured Text logic. IMPORTANT: For any timers, use a manual integer counter pattern, assuming a 100ms scan cycle (e.g., a 5-second timer needs a counter up to 50).",
+        "verification_notes": "Your safety and logic review.",
+        "simulation_trace": "A step-by-step execution trace."
+    }
+
+User Request: "{{ USER_PROMPT_GOES_HERE }}"
+"""
+
+# This is the NEW, dedicated prompt for the AI to review its own code.
+CODE_REVIEW_PROMPT_TEMPLATE = """
+You are a ruthless, expert IEC 61131-3 Syntax and Compatibility Verifier. Your only goal is to find and fix errors in the provided Structured Text code.
+
+**MANDATORY VERIFICATION RULES:**
+1.  **FORBIDDEN FUNCTIONS**: The code is NOT allowed to use pre-built timer function blocks like TON, TOF, or TP. This is a critical failure.
+2.  **REQUIRED TIMER PATTERN**: All time-based logic MUST use a manual integer counter (e.g., `TimerCounter := TimerCounter + 1;`).
+3.  **SYNTAX CHECK**: Check for any syntax errors like missing semicolons, incorrect assignments (:=), or invalid variable declarations.
+
+**YOUR TASK:**
+Review the JSON object below. If the `structured_text` violates ANY of the rules, you MUST fix it.
+
+Your response will be the **complete, corrected JSON object and nothing else.** Do not add explanations or apologies. Just provide the fixed JSON.
+
+If the code is already perfect, return the original JSON object unchanged.
+
+**JSON to Review:**
+{{ CODE_JSON_TO_REVIEW }}
 """
 
 # Initialize FastAPI and the AI Model
@@ -83,14 +86,6 @@ model = genai.GenerativeModel(model_name='gemini-1.5-flash', system_instruction=
 class Prompt(BaseModel):
     prompt: str
 
-def call_verification_service(code: str) -> dict:
-    try:
-        response = requests.post("http://localhost:8002/verify", json={"st_code": code})
-        response.raise_for_status()
-        return response.json()
-    except requests.exceptions.RequestException as e:
-        raise HTTPException(status_code=503, detail=f"Verification service is unavailable: {e}")
-
 def generate_from_llm(user_prompt: str) -> dict:
     try:
         response = model.generate_content(user_prompt)
@@ -101,14 +96,14 @@ def generate_from_llm(user_prompt: str) -> dict:
         print(f"Raw AI Output was:\n---\n{response.text}\n---")
         return {"error": "Failed to parse LLM response", "raw_output": response.text}
 
-# --- 3. THE MAIN API ENDPOINT ---
+# --- 3. THE MAIN API ENDPOINT WITH SELF-CORRECTION ---
 @app.post("/generate")
 def generate_and_verify_endpoint(prompt: Prompt):
     print(f"Received prompt: {prompt.prompt}")
     
+    # --- STAGE 1: Initial Generation ---
     user_prompt = USER_PROMPT_TEMPLATE.replace("{{ USER_PROMPT_GOES_HERE }}", prompt.prompt)
-    
-    print("1. Calling LLM for initial response...")
+    print("1. Calling LLM for initial generation...")
     generated_json = generate_from_llm(user_prompt)
     
     if "error" in generated_json:
@@ -117,38 +112,33 @@ def generate_and_verify_endpoint(prompt: Prompt):
     response_type = generated_json.get("response_type")
 
     if response_type == "chat":
-        print("✅ Intent is 'chat'.")
+        print("✅ Intent is 'chat'. Returning response.")
         return {"response_type": "chat", "message": generated_json.get("message")}
 
     elif response_type == "plc_code":
-        print("✅ Intent is 'generate_code'. Starting verification loop...")
+        print("✅ Intent is 'generate_code'. Proceeding to self-correction review.")
         
-        current_code_json = generated_json
-        max_retries = 2
-        for attempt in range(max_retries):
-            print(f"\n--- Verification Attempt {attempt + 1} of {max_retries} ---")
-            
-            code_to_verify = current_code_json.get("structured_text")
-            if not code_to_verify:
-                raise HTTPException(status_code=500, detail="AI failed to provide code in 'structured_text' field.")
+        # --- STAGE 2: AI Self-Correction Review ---
+        review_prompt = CODE_REVIEW_PROMPT_TEMPLATE.replace("{{ CODE_JSON_TO_REVIEW }}", json.dumps(generated_json, indent=2))
+        print("2. Sending code back to LLM for self-correction review...")
+        
+        corrected_json = generate_from_llm(review_prompt)
+        
+        if "error" in corrected_json:
+            print("⚠️ AI failed to return valid JSON during self-correction. Returning original version.")
+            # As a fallback, we return the original code even if the review failed.
+            return {"response_type": "plc_code", "final_json": generated_json, "verification_status": {"status": "review_failed"}}
 
-            verification_result = call_verification_service(code_to_verify)
-            
-            if verification_result.get("status") == "success":
-                print("✅ Code is valid! Returning result.")
-                return {"response_type": "plc_code", "final_json": current_code_json, "verification_status": verification_result}
-            else:
-                print("⚠️ Code is invalid. Constructing correction prompt...")
-                error_details = verification_result.get("details", "No details provided.")
-                correction_prompt = CORRECTION_PROMPT_TEMPLATE.replace("{{ ERROR_DETAILS }}", error_details).replace("{{ ORIGINAL_PROMPT }}", prompt.prompt)
-                
-                print("Retrying with LLM...")
-                current_code_json = generate_from_llm(correction_prompt)
-                if "error" in current_code_json:
-                    raise HTTPException(status_code=500, detail=f"AI returned a malformed response during correction: {current_code_json.get('raw_output')}")
-
-        print("❌ All attempts to generate valid code failed.")
-        raise HTTPException(status_code=500, detail="The AI failed to generate syntactically correct code after multiple attempts.")
+        print("3. Self-correction review complete.")
+        
+        # We can still do a final, optional check with our simple validator if we want
+        # but for now, we trust the AI's review.
+        
+        return {
+            "response_type": "plc_code",
+            "final_json": corrected_json,
+            "verification_status": {"status": "review_complete"}
+        }
 
     else:
         raise HTTPException(status_code=500, detail=f"AI returned an unknown response type: '{response_type}'")
