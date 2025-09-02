@@ -66,6 +66,7 @@
                     </div>
                 </div>
                 <div class="code-container">
+<<<<<<< HEAD
                     <pre id="codeOutput" class="code-output"><code>// Generated structured text will appear here</code></pre>
                 </div>
                
@@ -73,6 +74,38 @@
                     <button class="btn btn-secondary" id="debugBtn"><i class="fas fa-bug"></i> Debug Program</button>
                     <button class="btn btn-secondary"><i class="fas fa-code-branch"></i> Version History</button>
                     <button class="btn btn-primary"><i class="fas fa-play"></i> Simulate</button>
+=======
+                    <!-- This is the new, structured layout for the output -->
+                    <div id="variables-block" class="output-block hidden">
+                        <h3><i class="fas fa-list-alt"></i> Variable Declarations</h3>
+                        <pre><code id="variables-output"></code></pre>
+                    </div>
+                    <div id="code-block" class="output-block hidden">
+                        <h3><i class="fas fa-code"></i> Structured Text</h3>
+                        <pre><code id="st-code-output"></code></pre>
+                    </div>
+
+                
+                    <div class="output-block">
+                    <!-- ✨ New Block for Optimized Code -->
+                    <div id="optimization-block" class="output-block hidden">
+                        <h3><i class="fas fa-rocket"></i> Optimized Code Suggestion</h3>
+                        <pre><code id="optimization-output"></code></pre>
+                    </div>
+                    <div id="verification-block" class="output-block hidden">
+                        <h3><i class="fas fa-check-double"></i> Verification Status</h3>
+                        <div id="verification-output"></div>
+                    </div>
+                    <div id="simulation-block" class="output-block hidden">
+>>>>>>> 04c29fb1402e2347527bd5487fa9b36469337215
+                        <h3><i class="fas fa-tasks"></i> Simulation Trace</h3>
+                        <pre><code id="simulation-output"></code></pre>
+                    </div>
+                    <div id="placeholder-text" class="placeholder-text">
+                        <i class="fas fa-robot"></i>
+                        <p>Your generated code and analysis will appear here.</p>
+                    </div>
+>>>>>>> d6eb77b95289c403945b335fbcf0dee3d935f75f
                 </div>
             </section>
         </main>
