@@ -484,3 +484,171 @@ body {
     display: flex;
     justify-content: flex-end;
 }
+
+
+
+/* Make main content split screen fixed height */
+html, body {
+    height: 100%;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.main-content {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* left chat | right output */
+    height: calc(100vh - 120px); /* subtract header+footer */
+    overflow: hidden; /* prevent whole page scroll */
+}
+
+/* Left section (chat) */
+.prompt-section {
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid #ddd;
+    height: 100%;
+}
+
+.chat-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    margin: 0;       /* remove any margins */
+    padding: 0;      /* remove extra padding */
+}
+
+.chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+    z-index: 1;  /* keep it behind buttons */
+}
+
+.chat-input-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-top: 1px solid #ddd;
+    padding: 8px;
+    background: #fff;
+    margin: 0;
+}
+
+.chat-input-container textarea {
+    flex: 1;
+    resize: none;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 14px;
+    min-height: 40px;
+    max-height: 120px;
+    overflow-y: auto;
+}
+
+/* make sure button is always clickable */
+#attachFileBtn {
+    cursor: pointer;
+    z-index: 5;
+}
+
+
+.chat-input-container .btn {
+    flex-shrink: 0; /* buttons don’t shrink */
+}
+
+
+/* Right section (output) */
+.output-section {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.code-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+}
+
+.output-controls {
+    border-top: 1px solid #ddd;
+    padding: 10px;
+    background: #fff;
+}
+
+/* === ADD THIS CSS TO STYLES.CSS === */
+
+/* Output Tabs Styling */
+.output-tabs {
+    display: flex;
+    gap: var(--spacing-sm);
+    border-bottom: 1px solid var(--border-color);
+    padding: 0 var(--spacing-md);
+    margin-bottom: var(--spacing-md);
+}
+
+.tab-button {
+    padding: var(--spacing-sm) var(--spacing-md);
+    cursor: pointer;
+    background-color: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    transition: all 0.2s ease;
+}
+
+.tab-button:hover {
+    color: var(--text-primary);
+}
+
+.tab-button.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+}
+
+/* Tab Content Panes */
+.output-content {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+}
+
+.tab-pane {
+    height: 100%;
+    overflow-y: auto;
+    display: none; /* Hide all panes by default */
+}
+
+.tab-pane.active {
+    display: block; /* Show only the active pane */
+}
+
+/* Verification Notes Container */
+.verification-notes-container {
+    padding: var(--spacing-md);
+    border-top: 1px solid var(--border-color);
+    background-color: var(--card-bg);
+}
+
+.verification-notes-container h4 {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-sm);
+}
+
+#verificationNotesOutput {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+/* End of Added CSS */
