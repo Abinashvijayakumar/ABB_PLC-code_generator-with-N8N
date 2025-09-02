@@ -484,99 +484,171 @@ body {
     display: flex;
     justify-content: flex-end;
 }
-/* All of your existing, excellent CSS content goes here */
-/* ... */
-/* ... (Ensure all original rules are present) ... */
-/* ... */
 
-/* --- APPENDED STYLES FOR THE NEW UI --- */
-.input-controls {
+
+
+/* Make main content split screen fixed height */
+html, body {
+    height: 100%;
+    margin: 0;
     display: flex;
-    justify-content: flex-end;
-    gap: var(--spacing-sm); /* Add gap for multiple buttons */
+    flex-direction: column;
+}
+
+.main-content {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* left chat | right output */
+    height: calc(100vh - 120px); /* subtract header+footer */
+    overflow: hidden; /* prevent whole page scroll */
+}
+
+/* Left section (chat) */
+.prompt-section {
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid #ddd;
+    height: 100%;
+}
+
+.chat-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    margin: 0;       /* remove any margins */
+    padding: 0;      /* remove extra padding */
+}
+
+.chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+    z-index: 1;  /* keep it behind buttons */
+}
+
+.chat-input-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-top: 1px solid #ddd;
+    padding: 8px;
+    background: #fff;
+    margin: 0;
+}
+
+.chat-input-container textarea {
+    flex: 1;
+    resize: none;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 14px;
+    min-height: 40px;
+    max-height: 120px;
+    overflow-y: auto;
+}
+
+/* make sure button is always clickable */
+#attachFileBtn {
+    cursor: pointer;
+    z-index: 5;
+}
+
+
+.chat-input-container .btn {
+    flex-shrink: 0; /* buttons don’t shrink */
+}
+
+
+/* Right section (output) */
+.output-section {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
 }
 
 .code-container {
-    position: relative;
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+}
+
+.output-controls {
+    border-top: 1px solid #ddd;
+    padding: 10px;
+    background: #fff;
+}
+
+/* === ADD THIS CSS TO STYLES.CSS === */
+
+/* Output Tabs Styling */
+.output-tabs {
     display: flex;
-    flex-direction: column;
-    padding: var(--spacing-md);
-}
-
-.placeholder-text {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    text-align: center;
-    color: var(--text-muted);
-    transition: opacity 0.3s ease;
-}
-
-.placeholder-text i {
-    font-size: 3rem;
+    gap: var(--spacing-sm);
+    border-bottom: 1px solid var(--border-color);
+    padding: 0 var(--spacing-md);
     margin-bottom: var(--spacing-md);
 }
 
-.output-block {
-    margin-bottom: 1rem;
-    border-bottom: 1px solid var(--border-color);
-    padding-bottom: 1rem;
-}
-.output-block:last-child {
-    border-bottom: none;
-    margin-bottom: 0;
+.tab-button {
+    padding: var(--spacing-sm) var(--spacing-md);
+    cursor: pointer;
+    background-color: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    transition: all 0.2s ease;
 }
 
-.output-block h3 {
+.tab-button:hover {
+    color: var(--text-primary);
+}
+
+.tab-button.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+}
+
+/* Tab Content Panes */
+.output-content {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+}
+
+.tab-pane {
+    height: 100%;
+    overflow-y: auto;
+    display: none; /* Hide all panes by default */
+}
+
+.tab-pane.active {
+    display: block; /* Show only the active pane */
+}
+
+/* Verification Notes Container */
+.verification-notes-container {
+    padding: var(--spacing-md);
+    border-top: 1px solid var(--border-color);
+    background-color: var(--card-bg);
+}
+
+.verification-notes-container h4 {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
     font-size: 1rem;
     font-weight: 600;
-    color: var(--secondary-color);
-    margin-bottom: 0.5rem;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.output-block pre {
-    background-color: #fdfdfd;
-    padding: 0.75rem;
-    border-radius: var(--border-radius-sm);
-    white-space: pre-wrap;
-    word-wrap: break-word;
-    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-    font-size: 0.9rem;
     color: var(--text-primary);
-    border: 1px solid var(--border-color);
+    margin-bottom: var(--spacing-sm);
 }
 
-#optimization-output {
-    background-color: #e6f6e6; /* Highlight optimized code */
+#verificationNotesOutput {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
 }
-
-
-.verification-status {
-    display: flex;
-    align-items: center;
-    padding: var(--spacing-md);
-    border-radius: var(--border-radius-sm);
-    font-weight: 500;
-}
-.verification-status.success {
-    background-color: #e6f6e6;
-    color: var(--success-color);
-    border: 1px solid var(--success-color);
-}
-.verification-status.error {
-    background-color: #fdeaea;
-    color: var(--error-color);
-    border: 1px solid var(--error-color);
-}
-.verification-status i {
-    margin-right: var(--spacing-sm);
-}
-.hidden {
-    display: none !important;
-}
-
-/* End of appended styles */
+/* End of Added CSS */
