@@ -51,56 +51,54 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // --- 🤖 CORE AI FUNCTIONS ---
-    async function sendPrompt() {
-        const userInput = promptInput.value.trim();
-        if (!userInput) return;
+// In script.js, replace the entire sendPrompt function
 
-        addMessage('user', userInput);
-        promptInput.value = '';
-        showNotification('Contacting AI Orchestrator...', 'info');
+async function sendPrompt() {
+    const userInput = promptInput.value.trim();
+    if (!userInput) return;
 
-        try {
-            const response = await fetch(ORCHESTRATOR_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prompt: userInput })
-            });
+    addMessage('user', userInput);
+    promptInput.value = '';
+    showNotification('Contacting AI Orchestrator...', 'info');
 
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-            
-            const result = await response.json();
-            console.log("Received from FastAPI Orchestrator:", result);
-            
-            // The orchestrator's response is nested
+    try {
+        const response = await fetch(ORCHESTRATOR_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt: userInput })
+        });
+
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        
+        const result = await response.json();
+        console.log("Received from FastAPI Orchestrator:", result);
+        
+        // --- NEW LOGIC TO HANDLE DIFFERENT RESPONSE TYPES ---
+        if (result.response_type === "chat") {
+            // It's a simple chat message, just add it to the chat window
+            addMessage('assistant', result.message);
+            showNotification('Received a message.', 'success');
+
+        } else if (result.response_type === "plc_code") {
+            // It's a full code generation response
             populateOutputs(result.final_json);
             showNotification(`Code received. Verification status: ${result.verification_status.status}`, 'success');
-
-        } catch (error) {
-            console.error("Error sending to FastAPI Orchestrator:", error);
-            addMessage('assistant', "⚠️ Error: Could not reach the AI Orchestrator server. Is main.py running?");
-            showNotification('Error: Could not reach the main server.', 'error');
-        }
-    }
-
-    function populateOutputs(data) {
-        if (!data) {
-            addMessage('assistant', 'Received an empty response from the server.');
-            return;
-        }
-        if (data.explanation) {
-            addMessage('assistant', data.explanation);
+        
         } else {
-            addMessage('assistant', "Generated PLC logic received. See output panels for details.");
+            // Handle unexpected responses
+            addMessage('assistant', "Sorry, I received an unexpected response from the server.");
+            showNotification('Received an unknown response type.', 'error');
         }
-        variablesOutput.textContent = data.required_variables || "// No variables declared.";
-        codeOutput.textContent = data.structured_text || "// No code generated.";
-        simulationOutput.textContent = data.simulation_trace || "No simulation trace provided.";
-        verificationNotesOutput.textContent = data.verification_notes || "No verification notes provided.";
 
-        if (typeof hljs !== 'undefined') {
-            hljs.highlightAll();
-        }
+    } catch (error) {
+        console.error("Error sending to FastAPI Orchestrator:", error);
+        const errorMessage = error.message.includes('Failed to fetch') 
+            ? "⚠️ Error: Could not reach the AI Orchestrator server. Is main.py running?"
+            : `⚠️ An error occurred: ${error.message}`;
+        addMessage('assistant', errorMessage);
+        showNotification('Error: Could not reach the main server.', 'error');
     }
+}
 
     // --- ✅ VERIFICATION FUNCTION ---
     async function validateCode() {
