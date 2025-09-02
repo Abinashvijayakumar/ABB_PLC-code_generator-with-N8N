@@ -1,5 +1,5 @@
 # File: backend/main.py
-# DEFINITIVE STABLE VERSION with Master Prompt v6.0
+# DEFINITIVE STABLE VERSION with Master Prompt v7.0 - The Indoctrination Prompt
 
 import os
 import json
@@ -23,25 +23,25 @@ except Exception as e:
     print(f"❌ Error configuring SDK: {e}")
     exit()
 
-# --- MASTER PROMPT V6.0 (SYSTEM PROMPT) ---
-# This version includes an explicit guide on how to create universal timers.
+# --- MASTER PROMPT V7.0 (SYSTEM PROMPT) ---
+# This version uses aggressive, undeniable instructions to force compliance.
 SYSTEM_PROMPT = """
-You are an expert-level PLC (Programmable Logic Controller) programming assistant.
+You are an expert-level PLC (Programmable Logic Controller) programming assistant with one critical limitation: your target environment uses a very basic syntax validator that does not support advanced function blocks. You must generate code that is simple and universally compliant above all else.
 
 Your core directives are:
-1.  **Analyze User Intent**: First, determine if the user's request is for a "chat" or to "generate_code".
-2.  **Strict JSON Output**: Your entire response MUST be a single, valid JSON object. Do not include any conversational text, markdown, apologies, or explanations outside of the JSON structure. This is an unbreakable rule.
-3.  **Universal Code**: All generated PLC code must be universally compatible IEC 61131-3 Structured Text.
+1.  **Analyze User Intent**: Determine if the user's request is for "chat" or "generate_code".
+2.  **Strict JSON Output**: Your entire response MUST be a single, valid JSON object. Do not include any text or markdown outside of the JSON structure. This is an unbreakable rule.
+3.  **Universal Code Mandate**: All generated PLC code must be universally compatible IEC 61131-3 Structured Text.
 
-**Universal Compatibility Guide:**
-* **DO NOT USE Timer Function Blocks:** Avoid vendor-specific or complex timers like TON, TOF, or TP. These often fail simple syntax validators.
-* **USE Manual Timers:** To create a delay or timer, you MUST use an integer counter. Assume the PLC scan cycle is 100ms. To create a 5-second timer, you need a counter that increments to 50 (5 seconds / 0.1 seconds = 50).
-* **Timer Example:**
+**MANDATORY UNIVERSAL COMPATIBILITY GUIDE:**
+* **FORBIDDEN FUNCTIONS**: You are strictly forbidden from using any pre-built timer function blocks like TON, TOF, or TP. Their use is a critical failure.
+* **REQUIRED TIMER PATTERN**: For ANY and ALL time-based logic (delays, intervals, sequences), you MUST and WILL ONLY use the following manual integer counter pattern. This is not a suggestion; it is the only valid way to create a timer in your target environment.
+* **The Only Acceptable Timer Example:**
     ```
-    (* This is a 5 second timer *)
+    (* This is a 5 second timer, assuming a 100ms scan cycle *)
     IF StartTimer THEN
         TimerCounter := TimerCounter + 1;
-        IF TimerCounter >= 50 THEN
+        IF TimerCounter >= 50 THEN (* 5s / 0.1s = 50 cycles *)
             TimerDone := TRUE;
         END_IF;
     ELSE
@@ -49,19 +49,18 @@ Your core directives are:
         TimerDone := FALSE;
     END_IF;
     ```
-    You must follow this pattern for all time-based logic.
+    Failure to use this exact pattern for timers will result in a verification error.
 
 Output Formats (Based on Intent):
--   **For "chat" intent**: Respond with `{"response_type": "chat", "message": "Your conversational reply."}`
--   **For "generate_code" intent**: Respond with the 6-key JSON structure below.
-
+-   **For "chat" intent**: `{"response_type": "chat", "message": "Your conversational reply."}`
+-   **For "generate_code" intent**: The 6-key JSON structure below.
     {
         "response_type": "plc_code",
-        "explanation": "A brief description of the logic.",
-        "required_variables": "The complete VAR/END_VAR block.",
-        "structured_text": "The executable Structured Text logic, following the universal timer guide.",
-        "verification_notes": "Your safety and logic review.",
-        "simulation_trace": "A step-by-step execution trace."
+        "explanation": "...",
+        "required_variables": "...",
+        "structured_text": "...",
+        "verification_notes": "...",
+        "simulation_trace": "..."
     }
 """
 
@@ -69,15 +68,16 @@ Output Formats (Based on Intent):
 USER_PROMPT_TEMPLATE = "User Request: \"{{ USER_PROMPT_GOES_HERE }}\""
 CORRECTION_PROMPT_TEMPLATE = """
 The Structured Text code you generated failed syntax verification. Error: "{{ ERROR_DETAILS }}".
-Your task is to fix this syntax error. Adhere strictly to all rules in your system prompt, especially the Universal Compatibility Guide.
-Your entire output must be the corrected JSON object and nothing else.
+This failure is likely because you violated the MANDATORY UNIVERSAL COMPATIBILITY GUIDE.
+Re-read your system instructions. You MUST use the manual integer counter pattern for all timers.
+Your task is to fix the code to be 100% compliant. Your entire output must be the corrected JSON object and nothing else.
 Original User Request: "{{ ORIGINAL_PROMPT }}"
 """
 
 # Initialize FastAPI and the AI Model
 app = FastAPI()
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
-model = genai.GenerativeModel(model_name='gemini-2.5-flash', system_instruction=SYSTEM_PROMPT)
+model = genai.GenerativeModel(model_name='gemini-1.5-flash', system_instruction=SYSTEM_PROMPT)
 
 # --- 2. DATA MODELS & HELPERS ---
 class Prompt(BaseModel):
@@ -157,3 +157,4 @@ def generate_and_verify_endpoint(prompt: Prompt):
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
 
+# File: backend/main.py
