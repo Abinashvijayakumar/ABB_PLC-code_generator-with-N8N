@@ -1,5 +1,5 @@
 # File: backend/main.py
-# FINAL STABLE VERSION with advanced prompting (System + User)
+# DEFINITIVE STABLE VERSION with Master Prompt v6.0
 
 import os
 import json
@@ -23,49 +23,61 @@ except Exception as e:
     print(f"❌ Error configuring SDK: {e}")
     exit()
 
-# --- MASTER PROMPT V5.0 (SYSTEM PROMPT) ---
-# This defines the AI's core identity, rules, and output formats.
-# It is sent as a "system instruction" for maximum effect.
+# --- MASTER PROMPT V6.0 (SYSTEM PROMPT) ---
+# This version includes an explicit guide on how to create universal timers.
 SYSTEM_PROMPT = """
 You are an expert-level PLC (Programmable Logic Controller) programming assistant.
 
 Your core directives are:
 1.  **Analyze User Intent**: First, determine if the user's request is for a "chat" or to "generate_code".
-2.  **Strict JSON Output**: Your entire response MUST be a single, valid JSON object. Do not include any conversational text, markdown, apologies, or explanations outside of the JSON structure. This is a strict requirement for system compatibility.
-3.  **Universal Code**: When generating PLC code, it must be universally compatible IEC 61131-3 Structured Text. Avoid vendor-specific functions. Use simple, robust logic that works on any platform.
+2.  **Strict JSON Output**: Your entire response MUST be a single, valid JSON object. Do not include any conversational text, markdown, apologies, or explanations outside of the JSON structure. This is an unbreakable rule.
+3.  **Universal Code**: All generated PLC code must be universally compatible IEC 61131-3 Structured Text.
+
+**Universal Compatibility Guide:**
+* **DO NOT USE Timer Function Blocks:** Avoid vendor-specific or complex timers like TON, TOF, or TP. These often fail simple syntax validators.
+* **USE Manual Timers:** To create a delay or timer, you MUST use an integer counter. Assume the PLC scan cycle is 100ms. To create a 5-second timer, you need a counter that increments to 50 (5 seconds / 0.1 seconds = 50).
+* **Timer Example:**
+    ```
+    (* This is a 5 second timer *)
+    IF StartTimer THEN
+        TimerCounter := TimerCounter + 1;
+        IF TimerCounter >= 50 THEN
+            TimerDone := TRUE;
+        END_IF;
+    ELSE
+        TimerCounter := 0;
+        TimerDone := FALSE;
+    END_IF;
+    ```
+    You must follow this pattern for all time-based logic.
 
 Output Formats (Based on Intent):
 -   **For "chat" intent**: Respond with `{"response_type": "chat", "message": "Your conversational reply."}`
--   **For "generate_code" intent**: Respond with the following 6-key JSON structure:
+-   **For "generate_code" intent**: Respond with the 6-key JSON structure below.
+
     {
         "response_type": "plc_code",
         "explanation": "A brief description of the logic.",
         "required_variables": "The complete VAR/END_VAR block.",
-        "structured_text": "The executable Structured Text logic.",
+        "structured_text": "The executable Structured Text logic, following the universal timer guide.",
         "verification_notes": "Your safety and logic review.",
         "simulation_trace": "A step-by-step execution trace."
     }
 """
 
-# This is the template for the actual task given to the AI.
-USER_PROMPT_TEMPLATE = """
-User Request: "{{ USER_PROMPT_GOES_HERE }}"
-"""
-
+# Templates for the user-facing part of the prompt
+USER_PROMPT_TEMPLATE = "User Request: \"{{ USER_PROMPT_GOES_HERE }}\""
 CORRECTION_PROMPT_TEMPLATE = """
-The Structured Text code you previously generated failed a syntax verification check.
-Error Message: "{{ ERROR_DETAILS }}"
-
-Your task is to analyze this error and the user's original request, then generate a new, corrected JSON object.
+The Structured Text code you generated failed syntax verification. Error: "{{ ERROR_DETAILS }}".
+Your task is to fix this syntax error. Adhere strictly to all rules in your system prompt, especially the Universal Compatibility Guide.
 Your entire output must be the corrected JSON object and nothing else.
-
 Original User Request: "{{ ORIGINAL_PROMPT }}"
 """
 
 # Initialize FastAPI and the AI Model
 app = FastAPI()
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
-model = genai.GenerativeModel(model_name='gemini-1.5-flash', system_instruction=SYSTEM_PROMPT)
+model = genai.GenerativeModel(model_name='gemini-2.5-flash', system_instruction=SYSTEM_PROMPT)
 
 # --- 2. DATA MODELS & HELPERS ---
 class Prompt(BaseModel):
@@ -94,10 +106,8 @@ def generate_from_llm(user_prompt: str) -> dict:
 def generate_and_verify_endpoint(prompt: Prompt):
     print(f"Received prompt: {prompt.prompt}")
     
-    # Use the new prompt templates
     user_prompt = USER_PROMPT_TEMPLATE.replace("{{ USER_PROMPT_GOES_HERE }}", prompt.prompt)
     
-    # Initial LLM Call
     print("1. Calling LLM for initial response...")
     generated_json = generate_from_llm(user_prompt)
     
@@ -106,23 +116,21 @@ def generate_and_verify_endpoint(prompt: Prompt):
 
     response_type = generated_json.get("response_type")
 
-    # Handle "chat" intent
     if response_type == "chat":
         print("✅ Intent is 'chat'.")
         return {"response_type": "chat", "message": generated_json.get("message")}
 
-    # Handle "generate_code" intent
     elif response_type == "plc_code":
         print("✅ Intent is 'generate_code'. Starting verification loop...")
         
         current_code_json = generated_json
         max_retries = 2
         for attempt in range(max_retries):
-            print(f"\n--- Verification Attempt {attempt + 1} ---")
+            print(f"\n--- Verification Attempt {attempt + 1} of {max_retries} ---")
             
             code_to_verify = current_code_json.get("structured_text")
             if not code_to_verify:
-                raise HTTPException(status_code=500, detail="AI failed to provide code.")
+                raise HTTPException(status_code=500, detail="AI failed to provide code in 'structured_text' field.")
 
             verification_result = call_verification_service(code_to_verify)
             
@@ -142,7 +150,6 @@ def generate_and_verify_endpoint(prompt: Prompt):
         print("❌ All attempts to generate valid code failed.")
         raise HTTPException(status_code=500, detail="The AI failed to generate syntactically correct code after multiple attempts.")
 
-    # Fallback for unknown response types
     else:
         raise HTTPException(status_code=500, detail=f"AI returned an unknown response type: '{response_type}'")
 
