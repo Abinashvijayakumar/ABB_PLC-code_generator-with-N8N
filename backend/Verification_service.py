@@ -6,7 +6,7 @@ from pydantic import BaseModel
 import uvicorn
 
 # Import your working verification function from the other file
-from scripts.verify_st import verify_structured_text
+from .scripts.verify_st import verify_structured_text
 
 app = FastAPI()
 

@@ -10,8 +10,7 @@ typedef struct {
   // PROGRAM Interface - IN, OUT, IN_OUT variables
 
   // PROGRAM private variables - TEMP, private and located variables
-  __DECLARE_LOCATED(BOOL,STARTBUTTON)
-  __DECLARE_LOCATED(BOOL,MOTOR)
+  __DECLARE_VAR(BOOL,X)
 
 } MAIN;
 
