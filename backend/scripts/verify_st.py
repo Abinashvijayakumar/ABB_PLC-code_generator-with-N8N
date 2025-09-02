@@ -52,9 +52,15 @@ def verify_structured_text(st_code: str) -> dict:
         if os.path.exists(tmp_filename):
             os.remove(tmp_filename)
 
+# In backend/scripts/verify_st.py
+
+# ... (the verify_structured_text function remains the same) ...
+
 # --- Example Usage for Testing ---
 if __name__ == "__main__":
-    valid_code = "PROGRAM main\n  VAR\n    StartButton AT %IX0.0 : BOOL;\n  END_VAR\n  POU_body\n    ; (* A comment *) \n  END_POU\nEND_PROGRAM"
+    # --- REPLACE THE OLD valid_code WITH THIS ONE ---
+    valid_code = "PROGRAM main\n  VAR\n    StartButton AT %IX0.0 : BOOL;\n    Motor AT %QX0.0 : BOOL;\n  END_VAR\n  Motor := StartButton;\nEND_PROGRAM"
+    
     invalid_code = "PROGRAM main\n  Motor = StartButton;\nEND_PROGRAM"
 
     print("--- Testing Valid Code ---")
