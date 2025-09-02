@@ -1,4 +1,4 @@
-// FINAL SCRIPT.JS FOR FASTAPI ARCHITECTURE
+// FINAL UNIFIED SCRIPT - Works with Self-Correction Engine
 
 document.addEventListener('DOMContentLoaded', function() {
     // --- 💻 DOM ELEMENTS ---
@@ -22,9 +22,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const panes = document.querySelectorAll('.tab-pane');
 
     // --- 🎯 API ENDPOINTS ---
-    // We NO LONGER use n8n. All generation requests go to our main orchestrator.
     const ORCHESTRATOR_URL = 'http://localhost:8000/generate';
-    const VERIFICATION_SERVICE_URL = 'http://localhost:8002/verify';
 
     // --- 🚀 EVENT LISTENERS ---
     sendPromptBtn.addEventListener('click', sendPrompt);
@@ -35,101 +33,80 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    validateBtn.addEventListener('click', validateCode);
-    downloadBtn.addEventListener('click', downloadCode);
-    copyBtn.addEventListener('click', () => copyToClipboard(codeOutput.textContent));
+    if (validateBtn) validateBtn.addEventListener('click', () => showNotification("Manual validation is no longer needed; code is reviewed by the AI automatically!", 'info'));
+    if (downloadBtn) downloadBtn.addEventListener('click', downloadCode);
+    if (copyBtn) copyBtn.addEventListener('click', () => copyToClipboard(codeOutput.textContent));
 
     // Tab switching logic
-    tabs.forEach(tab => {
-        tab.addEventListener('click', () => {
-            tabs.forEach(t => t.classList.remove('active'));
-            panes.forEach(p => p.classList.remove('active'));
-            tab.classList.add('active');
-            const targetPaneId = tab.getAttribute('data-tab');
-            document.getElementById(`${targetPaneId}-tab`).classList.add('active');
+    if (tabs.length > 0) {
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                tabs.forEach(t => t.classList.remove('active'));
+                panes.forEach(p => p.classList.remove('active'));
+                tab.classList.add('active');
+                const targetPaneId = tab.getAttribute('data-tab');
+                document.getElementById(`${targetPaneId}-tab`).classList.add('active');
+            });
         });
-    });
+    }
 
     // --- 🤖 CORE AI FUNCTIONS ---
-// In script.js, replace the entire sendPrompt function
+    async function sendPrompt() {
+        const userInput = promptInput.value.trim();
+        if (!userInput) return;
 
-async function sendPrompt() {
-    const userInput = promptInput.value.trim();
-    if (!userInput) return;
+        addMessage('user', userInput);
+        promptInput.value = '';
+        showNotification('Contacting AI Orchestrator...', 'info');
 
-    addMessage('user', userInput);
-    promptInput.value = '';
-    showNotification('Contacting AI Orchestrator...', 'info');
-
-    try {
-        const response = await fetch(ORCHESTRATOR_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prompt: userInput })
-        });
-
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-        
-        const result = await response.json();
-        console.log("Received from FastAPI Orchestrator:", result);
-        
-        // --- NEW LOGIC TO HANDLE DIFFERENT RESPONSE TYPES ---
-        if (result.response_type === "chat") {
-            // It's a simple chat message, just add it to the chat window
-            addMessage('assistant', result.message);
-            showNotification('Received a message.', 'success');
-
-        } else if (result.response_type === "plc_code") {
-            // It's a full code generation response
-            populateOutputs(result.final_json);
-            showNotification(`Code received. Verification status: ${result.verification_status.status}`, 'success');
-        
-        } else {
-            // Handle unexpected responses
-            addMessage('assistant', "Sorry, I received an unexpected response from the server.");
-            showNotification('Received an unknown response type.', 'error');
-        }
-
-    } catch (error) {
-        console.error("Error sending to FastAPI Orchestrator:", error);
-        const errorMessage = error.message.includes('Failed to fetch') 
-            ? "⚠️ Error: Could not reach the AI Orchestrator server. Is main.py running?"
-            : `⚠️ An error occurred: ${error.message}`;
-        addMessage('assistant', errorMessage);
-        showNotification('Error: Could not reach the main server.', 'error');
-    }
-}
-
-    // --- ✅ VERIFICATION FUNCTION ---
-    async function validateCode() {
-        const codeToValidate = codeOutput.textContent;
-        if (!codeToValidate || codeToValidate.startsWith("//")) {
-            showNotification('Nothing to validate.', 'warning');
-            return;
-        }
-
-        showNotification('Sending code for validation...', 'info');
-        
         try {
-            const response = await fetch(VERIFICATION_SERVICE_URL, {
+            const response = await fetch(ORCHESTRATOR_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ st_code: codeToValidate })
+                body: JSON.stringify({ prompt: userInput })
             });
 
-            if (!response.ok) throw new Error(`Server responded with status: ${response.status}`);
-            const validationResult = await response.json();
-
-            if (validationResult.status === 'success') {
-                showNotification('Validation Successful: Syntax OK!', 'success');
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            
+            const result = await response.json();
+            console.log("Received from FastAPI Orchestrator:", result);
+            
+            if (result.response_type === "chat") {
+                addMessage('assistant', result.message);
+                showNotification('Received a message.', 'success');
+            } else if (result.response_type === "plc_code") {
+                populateOutputs(result.final_json); // This function is now defined below
+                showNotification(`Code received. AI self-review complete.`, 'success');
             } else {
-                addMessage('assistant', `⚠️ Validation Failed:\n${validationResult.details}`);
-                showNotification(`Validation Failed: Check chat for error details.`, 'error');
+                addMessage('assistant', "Sorry, I received an unexpected response from the server.");
+                showNotification('Received an unknown response type.', 'error');
             }
         } catch (error) {
-            console.error("Error connecting to validation service:", error);
-            addMessage('assistant', '⚠️ Error: Could not reach the validation server. Make sure the service is running.');
-            showNotification('Error: Could not reach the validation server.', 'error');
+            console.error("Error sending to FastAPI Orchestrator:", error);
+            const errorMessage = "⚠️ Error: Could not reach the AI Orchestrator server. Is main.py running?";
+            addMessage('assistant', errorMessage);
+            showNotification('Error: Could not reach the main server.', 'error');
+        }
+    }
+
+    // THIS FUNCTION IS NOW DEFINED HERE
+    function populateOutputs(data) {
+        if (!data) {
+            addMessage('assistant', 'Received an empty response from the server.');
+            return;
+        }
+        if (data.explanation) {
+            addMessage('assistant', data.explanation);
+        } else {
+            addMessage('assistant', "Generated PLC logic received. See output panels for details.");
+        }
+        variablesOutput.textContent = data.required_variables || "// No variables declared.";
+        codeOutput.textContent = data.structured_text || "// No code generated.";
+        simulationOutput.textContent = data.simulation_trace || "No simulation trace provided.";
+        verificationNotesOutput.textContent = data.verification_notes || "No verification notes provided.";
+
+        if (typeof hljs !== 'undefined') {
+            hljs.highlightAll();
         }
     }
 
@@ -150,7 +127,7 @@ async function sendPrompt() {
         }).catch(err => {
             console.error('Failed to copy text: ', err);
             showNotification('Failed to copy code.', 'error');
-        });
+});
     }
 
     function downloadCode() {
@@ -167,6 +144,12 @@ async function sendPrompt() {
     }
     
     function showNotification(message, type = 'info') {
+        // Find existing notification and remove it to prevent overlap
+        const existingNotif = document.querySelector('.notification');
+        if (existingNotif) {
+            existingNotif.remove();
+        }
+
         const notification = document.createElement('div');
         notification.className = `notification ${type}`;
         notification.textContent = message;
