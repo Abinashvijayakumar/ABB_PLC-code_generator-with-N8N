@@ -1,38 +1,65 @@
-# backend/main.py
+# File: backend/main.py
+# The brain of our application
+
 from fastapi import FastAPI
 from pydantic import BaseModel
-import requests
-import os
+import uvicorn
+import requests # To make requests to our other services
+import google.generativeai as genai # Assuming you have this configured
 
-# Define the data model for the incoming request from the React UI
-class GenerationRequest(BaseModel):
-    prompt: str
+# --- Your Gemini AI Setup (from your test script) ---
+# genai.configure(api_key="...")
+# master_prompt = "..."
+# model = genai.GenerativeModel('gemini-1.5-flash')
+# ---
 
-# Create the FastAPI app instance
 app = FastAPI()
 
-# A simple root endpoint to check if the API is running
-@app.get("/")
-def read_root():
-    return {"status": "PLC AI Generator API is running"}
+class Prompt(BaseModel):
+    prompt: str
 
-# The main endpoint for code generation
-@app.post("/api/generate")
-def generate_code(request: GenerationRequest):
-    # Get the n8n webhook URL from Member 1
-    # For now, we can hardcode it. Later, we'll use environment variables.
-    n8n_webhook_url = "http://host.docker.internal:5678/webhook/..." # Use the URL from Member 1
+@app.post("/generate")
+def generate_and_verify(prompt: Prompt):
+    # STEP 1: Generate code from the LLM (Replace with your actual Gemini call)
+    print("1. Generating initial code from LLM...")
+    # full_api_prompt = master_prompt.replace("{{ USER_PROMPT_GOES_HERE }}", prompt.prompt)
+    # response = model.generate_content(full_api_prompt)
+    # generated_json = response.json() # Or however you parse it
+
+    # For testing, let's use placeholder data:
+    generated_json = {
+        "explanation": "This is a test explanation.",
+        "required_variables": "VAR\n  xTest: BOOL;\nEND_VAR",
+        "structured_text": "xTest := TRUE;", # This is a valid code
+        "verification_notes": "Test notes.",
+        "simulation_trace": "Test trace."
+    }
+    print("2. Code generated.")
+
+    # STEP 2: Automatically validate the generated code
+    print("3. Sending generated code to verification service...")
+    code_to_verify = generated_json.get("structured_text", "")
 
     try:
-        # Forward the prompt to the n8n workflow
-        response = requests.post(n8n_webhook_url, json={"prompt": request.prompt})
-        
-        # Check for a successful response from n8n
-        if response.status_code == 200:
-            # Return the data from n8n directly to the React frontend
-            return response.json()
-        else:
-            return {"error": "Failed to get response from n8n workflow", "details": response.text}
+        verification_response = requests.post(
+            "http://localhost:8002/verify", 
+            json={"st_code": code_to_verify}
+        )
+        verification_response.raise_for_status() # Raise an exception for bad status codes
+        verification_result = verification_response.json()
+        print(f"4. Verification result: {verification_result}")
 
-    except Exception as e:
-        return {"error": "An exception occurred", "details": str(e)}
+    except requests.exceptions.RequestException as e:
+        print(f"Error connecting to verification service: {e}")
+        return {"error": "Could not connect to the verification service."}
+
+    # --- NEXT STEP: ADD THE LOOPING LOGIC HERE ---
+    # For now, we just return everything
+
+    return {
+        "final_json": generated_json,
+        "verification_status": verification_result
+    }
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8000)
