@@ -7,10 +7,11 @@
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 </head>
 <body>
     <div class="container">
-        <!-- Header Section -->
         <header class="header">
             <div class="logo">
                 <h1>Prompt to PLC</h1>
@@ -21,9 +22,7 @@
             </div>
         </header>
 
-        <!-- Main Content Area with Split Screen -->
         <main class="main-content">
-            <!-- Left Side - Prompt Input -->
             <section class="prompt-section">
                 <div class="section-header">
                     <h2>Prompt Input</h2>
@@ -35,7 +34,6 @@
                 </div>
                 <div class="chat-container">
                     <div class="chat-messages" id="chatMessages">
-                        <!-- Messages will be added here dynamically -->
                         <div class="system-message">
                             <p>Welcome to Prompt to PLC! Describe your PLC requirements, and I'll generate structured text code for you.</p>
                         </div>
@@ -43,15 +41,12 @@
                     
                     <div class="chat-input-container">
                         <textarea id="promptInput" placeholder="Describe your PLC requirements here..."></textarea>
-    
                         <button class="btn btn-icon" title="Attach File"><i class="fas fa-paperclip"></i></button>
-                        <button class="btn btn-primary" id="sendPrompt"  ><i class="fas fa-paper-plane"></i> Send</button>
-                        
+                        <button class="btn btn-primary" id="sendPrompt"><i class="fas fa-paper-plane"></i> Send</button>
                     </div>
                 </div>
             </section>
 
-            <!-- Right Side - Generated Code Output -->
             <section class="output-section">
                 <div class="section-header">
                     <h2 id="outputTitle">Generated Output</h2>
@@ -62,55 +57,38 @@
                         </select>
                         <button class="btn btn-small" title="Copy Code"><i class="fas fa-copy"></i></button>
                         <button class="btn btn-small" id="downloadBtn" title="Download Code"><i class="fas fa-download"></i> Download</button>
-                        <button class="btn btn-small" title="Validate Code"><i class="fas fa-check-circle"></i></button>
+                        <button class="btn btn-small" id="validateBtn" title="Validate Code"><i class="fas fa-check-circle"></i></button>
                     </div>
                 </div>
-                <div class="code-container">
-                    <pre id="codeOutput" class="code-output"><code>// Generated structured text will appear here</code></pre>
+
+                <div class="output-tabs">
+                    <button class="tab-button active" data-tab="code">Structured Text</button>
+                    <button class="tab-button" data-tab="vars">Variables</button>
+                    <button class="tab-button" data-tab="sim">Simulation</button>
                 </div>
-               
-                <div class="output-controls">
-                    <button class="btn btn-secondary" id="debugBtn"><i class="fas fa-bug"></i> Debug Program</button>
-                    <button class="btn btn-secondary"><i class="fas fa-code-branch"></i> Version History</button>
-                    <button class="btn btn-primary"><i class="fas fa-play"></i> Simulate</button>
-                        <h3><i class="fas fa-tasks"></i> Simulation Trace</h3>
-                        <pre><code id="simulation-output"></code></pre>
+                <div class="output-content">
+                    <div id="code-tab" class="tab-pane active">
+                        <pre><code id="codeOutput" class="language-iecst">// Generated structured text will appear here</code></pre>
                     </div>
-                    <div id="placeholder-text" class="placeholder-text">
-                        <i class="fas fa-robot"></i>
-                        <p>Your generated code and analysis will appear here.</p>
+                    <div id="vars-tab" class="tab-pane">
+                        <pre><code id="variablesOutput" class="language-iecst">// Declared variables will appear here</code></pre>
+                    </div>
+                    <div id="sim-tab" class="tab-pane">
+                        <pre><code id="simulationOutput">// The simulation trace will appear here</code></pre>
                     </div>
                 </div>
-            </section>
+                <div class="verification-notes-container">
+                    <h4><i class="fas fa-shield-alt"></i> Verification Notes</h4>
+                    <p id="verificationNotesOutput">AI's analysis will appear here...</p>
+                </div>
+
+                </section>
         </main>
 
-        <!-- Footer Section -->
         <footer class="footer">
-            <p>&copy; 2023 Prompt to PLC. All rights reserved.</p>
+            <p>&copy; 2025 Prompt to PLC. All rights reserved.</p>
         </footer>
     </div>
-    <div class="output-tabs">
-    <button class="tab-button active" data-tab="code">Structured Text</button>
-    <button class="tab-button" data-tab="vars">Variables</button>
-    <button class="tab-button" data-tab="sim">Simulation</button>
-</div>
-
-<div class="output-content">
-    <div id="code-tab" class="tab-pane active">
-        <pre><code id="codeOutput" class="language-iecst">// Generated structured text will appear here</code></pre>
-    </div>
-    <div id="vars-tab" class="tab-pane">
-        <pre><code id="variablesOutput" class="language-iecst"></code></pre>
-    </div>
-    <div id="sim-tab" class="tab-pane">
-        <pre><code id="simulationOutput"></code></pre>
-    </div>
-</div>
-
-<div class="verification-notes-container">
-    <h4><i class="fas fa-shield-alt"></i> Verification Notes</h4>
-    <p id="verificationNotesOutput">AI's analysis will appear here...</p>
-</div>
 
     <script src="script.js"></script>
 </body>
