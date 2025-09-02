@@ -1,6 +1,5 @@
 # File: backend/main.py
-# This is the central "brain" or "Orchestrator" of our application.
-# The UI will only talk to this file.
+# FINAL VERSION with Master Prompt v4.0 and improved error handling.
 
 import os
 import json
@@ -13,86 +12,69 @@ from dotenv import load_dotenv
 import google.generativeai as genai
 
 # --- 1. SETUP AND CONFIGURATION ---
-
-# Load environment variables from the .env file (e.g., your API key)
 load_dotenv()
-
-# Configure the Google Generative AI SDK
 try:
     api_key = os.getenv("GOOGLE_API_KEY")
     if not api_key:
-        raise ValueError("GOOGLE_API_KEY not found in .env file. Please create a .env file in the root directory.")
+        raise ValueError("GOOGLE_API_KEY not found in .env file.")
     genai.configure(api_key=api_key)
     print("✅ Google AI SDK configured successfully.")
 except Exception as e:
     print(f"❌ Error configuring SDK: {e}")
     exit()
 
-# Master Prompt v3.0 with Intent Detection
-MASTER_PROMPT_V3 = """
-You are a helpful and highly skilled PLC engineering assistant. Your first task is to analyze the user's request and determine their intent. There are two possible intents: "chat" or "generate_code".
+# --- MASTER PROMPT V4.0 ---
+MASTER_PROMPT_V4 = """
+You are a universal PLC engineering assistant. Your primary directive is to produce safe, efficient, and universally compatible IEC 61131-3 Structured Text. Your secondary directive is to be a helpful conversational assistant.
 
-1.  **Analyze Intent:**
-    * If the user is asking a general question, making a greeting (like "hi", "hello"), or asking for help, the intent is "chat".
-    * If the user is describing a logical operation, a machine process, or anything that requires PLC logic (e.g., "turn on a motor", "if sensor A is high"), the intent is "generate_code".
+Your first task is to analyze the user's intent: "chat" or "generate_code".
 
-2.  **Generate Response based on Intent:**
-    * **If the intent is "chat":**
-        Respond with a single JSON object with ONE key: `{"response_type": "chat", "message": "Your friendly, conversational reply goes here."}`. Be helpful and guide the user on how to ask for code. Do NOT generate any PLC code.
-    * **If the intent is "generate_code":**
-        Respond with a single JSON object with SIX keys as defined below. This is the "PLC Co-pilot" mode.
-        - "response_type": Must be the string "plc_code".
-        - "explanation": A brief, clear description of the implemented logic.
-        - "required_variables": A string containing the complete VAR/END_VAR block.
-        - "structured_text": A string containing the executable Structured Text logic.
-        - "verification_notes": A string with your safety review and any potential warnings.
-        - "simulation_trace": A string describing the step-by-step execution.
+1.  **If the intent is "chat"** (e.g., greetings, questions):
+    Respond ONLY with this JSON format: `{"response_type": "chat", "message": "Your conversational reply."}`
 
-**Crucial Rules:**
-* Your entire output MUST be a single, valid JSON object. No exceptions.
-* Every response must contain the "response_type" key.
+2.  **If the intent is "generate_code"**:
+    You MUST generate code that is as generic and platform-independent as possible. Avoid vendor-specific timer functions (like TON_ABB). Instead, use simple boolean logic and integer counters for timers, which work on any PLC. This is a critical requirement.
+    
+    Respond ONLY with this exact JSON format:
+    {
+        "response_type": "plc_code",
+        "explanation": "A brief, clear description of the logic.",
+        "required_variables": "The complete VAR/END_VAR block.",
+        "structured_text": "The executable Structured Text logic. Use comments.",
+        "verification_notes": "Your safety and logic review.",
+        "simulation_trace": "A step-by-step execution trace."
+    }
+
+**IRONCLAD RULE:** Your entire output must be a single, valid JSON object. Do not include any text, apologies, or markdown formatting outside of the JSON structure, no matter what.
 ---
-Analyze the following user request and generate the appropriate JSON response.
+Analyze the user request and generate the required JSON response.
 
 **User Request:** "{{ USER_PROMPT_GOES_HERE }}"
 """
 
-# Initialize the FastAPI application
+# Initialize FastAPI app
 app = FastAPI()
-
-# Add CORS middleware to allow requests from your frontend's local server
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allows all origins
-    allow_credentials=True,
-    allow_methods=["*"],  # Allows all methods
-    allow_headers=["*"],  # Allows all headers
+    allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"],
 )
 
-
-# Initialize the Generative Model
+# Initialize Generative Model
 model = genai.GenerativeModel('gemini-1.5-flash')
 
-
-# --- 2. DATA MODELS ---
+# --- 2. DATA MODELS & HELPERS ---
 class Prompt(BaseModel):
     prompt: str
 
-
-# --- 3. HELPER FUNCTIONS ---
 def call_verification_service(code: str) -> dict:
-    """Makes a request to our verification microservice."""
     try:
         response = requests.post("http://localhost:8002/verify", json={"st_code": code})
         response.raise_for_status()
         return response.json()
     except requests.exceptions.RequestException as e:
-        print(f"❌ ERROR: Could not connect to verification service: {e}")
         raise HTTPException(status_code=503, detail=f"Verification service is unavailable: {e}")
 
-
 def generate_from_llm(current_prompt: str) -> dict:
-    """Calls the Gemini API and safely parses the JSON response."""
     try:
         response = model.generate_content(current_prompt)
         cleaned_response = response.text.replace("```json", "").replace("```", "").strip()
@@ -100,72 +82,80 @@ def generate_from_llm(current_prompt: str) -> dict:
     except (json.JSONDecodeError, AttributeError, ValueError) as e:
         print(f"❌ ERROR: Failed to parse JSON from LLM response: {e}")
         print(f"Raw AI Output was:\n---\n{response.text}\n---")
-        raise HTTPException(status_code=500, detail="The AI returned a malformed response.")
+        # Return a structured error instead of crashing
+        return {"error": "Failed to parse LLM response", "raw_output": response.text}
 
-
-# --- 4. THE MAIN API ENDPOINT ---
+# --- 3. THE MAIN API ENDPOINT ---
 @app.post("/generate")
 def generate_and_verify_endpoint(prompt: Prompt):
-    """
-    Orchestrates the entire process: intent detection, code generation, and self-correction.
-    """
     print(f"Received prompt: {prompt.prompt}")
     
-    initial_prompt = MASTER_PROMPT_V3.replace("{{ USER_PROMPT_GOES_HERE }}", prompt.prompt)
+    initial_prompt = MASTER_PROMPT_V4.replace("{{ USER_PROMPT_GOES_HERE }}", prompt.prompt)
     
-    # Initial LLM Call to Determine Intent
-    print("1. Calling LLM to determine intent and generate initial response...")
+    # Initial LLM Call
+    print("1. Calling LLM for initial response...")
     generated_json = generate_from_llm(initial_prompt)
+    
+    # Check for parsing errors from the helper
+    if "error" in generated_json:
+        raise HTTPException(status_code=500, detail=f"AI returned a malformed response: {generated_json.get('raw_output')}")
+
     response_type = generated_json.get("response_type")
 
     # Handle "chat" intent
     if response_type == "chat":
-        print("✅ Intent is 'chat'. Returning conversational response.")
-        return {"response_type": "chat", "message": generated_json.get("message", "I'm sorry, I had trouble forming a reply.")}
+        print("✅ Intent is 'chat'.")
+        return {"response_type": "chat", "message": generated_json.get("message")}
 
     # Handle "generate_code" intent
     elif response_type == "plc_code":
         print("✅ Intent is 'generate_code'. Starting verification loop...")
         
-        max_retries = 3
+        current_code_json = generated_json
+        max_retries = 2 # Let's be more conservative
         for attempt in range(max_retries):
             print(f"\n--- Verification Attempt {attempt + 1} ---")
             
-            code_to_verify = generated_json.get("structured_text", "")
+            code_to_verify = current_code_json.get("structured_text")
             if not code_to_verify:
-                raise HTTPException(status_code=500, detail="AI determined intent was code generation but failed to provide code.")
+                raise HTTPException(status_code=500, detail="AI failed to provide code.")
 
             verification_result = call_verification_service(code_to_verify)
             
             if verification_result.get("status") == "success":
-                print("✅ Code is valid! Returning result to UI.")
+                print("✅ Code is valid! Returning result.")
                 return {
                     "response_type": "plc_code",
-                    "final_json": generated_json,
-                    "verification_status": verification_result,
-                    "attempts": attempt + 1
+                    "final_json": current_code_json,
+                    "verification_status": verification_result
                 }
-            else: # If verification fails, construct a correction prompt
+            else:
                 print("⚠️ Code is invalid. Constructing correction prompt...")
                 error_details = verification_result.get("details", "No details provided.")
+                # --- V4 CORRECTION PROMPT ---
+                # This prompt is highly specific and reinforces the JSON-only rule.
                 correction_prompt = (
-                    f"The Structured Text code you generated failed syntax verification. "
-                    f"Error: '{error_details}'.\n\n"
-                    f"Please fix this syntax error and provide the complete, corrected JSON object with `response_type: 'plc_code'`. "
+                    "The Structured Text code you generated failed syntax verification. "
+                    f"The error was: '{error_details}'.\n\n"
+                    "Your task is to fix this specific syntax error. Do not explain yourself. Do not apologize. "
+                    "Your ONLY output must be the complete, corrected JSON object in the required format, starting with `{` and ending with `}`."
                     f"The original user request was: '{prompt.prompt}'"
                 )
+                
                 print("Retrying with LLM...")
-                generated_json = generate_from_llm(correction_prompt)
+                current_code_json = generate_from_llm(correction_prompt)
+                if "error" in current_code_json: # Check for parsing errors on retry
+                    raise HTTPException(status_code=500, detail=f"AI returned a malformed response during correction: {current_code_json.get('raw_output')}")
+
 
         print("❌ All attempts to generate valid code failed.")
         raise HTTPException(status_code=500, detail="The AI failed to generate syntactically correct code after multiple attempts.")
 
     # Fallback for unknown response types
     else:
-        print(f"❌ Unknown response_type from AI: {response_type}")
-        raise HTTPException(status_code=500, detail="The AI returned an unknown response type.")
+        raise HTTPException(status_code=500, detail=f"AI returned an unknown response type: '{response_type}'")
 
-# --- 5. SERVER LAUNCH ---
+# --- 4. SERVER LAUNCH ---
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
-# File: backend/verification_service.py
+
