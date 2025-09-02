@@ -7,6 +7,7 @@ import json
 import requests
 import uvicorn
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
 import google.generativeai as genai
@@ -53,8 +54,17 @@ Convert the following user request into the specified JSON format.
 *User Request:* "{{ USER_PROMPT_GOES_HERE }}"
 """
 
-# Initialize the FastAPI application
+# Create FastAPI app
 app = FastAPI()
+
+# Add CORS middleware to allow OPTIONS requests (CORS preflight)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # You can restrict this to your frontend URL
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Initialize the Generative Model
 model = genai.GenerativeModel('gemini-1.5-flash')
@@ -88,12 +98,16 @@ def generate_code_from_llm(current_prompt: str) -> dict:
     """Calls the Gemini API and parses the JSON response."""
     try:
         response = model.generate_content(current_prompt)
-        # Clean the response to ensure it's valid JSON
-        cleaned_response = response.text.replace("json", "").replace("", "").strip()
+        # Remove markdown code fences and extra 'json' if present
+        cleaned_response = response.text.strip()
+        if cleaned_response.startswith("```"):
+            cleaned_response = cleaned_response.strip("`").replace("json", "").strip()
+        if not cleaned_response:
+            raise ValueError("Empty response from LLM.")
         return json.loads(cleaned_response)
     except (json.JSONDecodeError, AttributeError, ValueError) as e:
         print(f"❌ ERROR: Failed to parse JSON from LLM response: {e}")
-        print(f"Raw AI Output was:\n---\n{response.text}\n---")
+        print(f"Raw AI Output was:\n---\n{getattr(response, 'text', '')}\n---")
         raise HTTPException(status_code=500, detail="The AI returned a malformed response.")
 
 
