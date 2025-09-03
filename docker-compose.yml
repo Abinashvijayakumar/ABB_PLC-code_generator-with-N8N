@@ -1,44 +1,31 @@
-# This file defines and runs our entire multi-container application.
-
-version: '3.8'
 
 services:
-  # The Main Orchestrator Service (main.py)
   orchestrator:
     build:
       context: .
       dockerfile: Dockerfile
     command: uvicorn backend.main:app --host 0.0.0.0 --port 8000
     ports:
-      - "8000:8000" # Connects your computer's port 8000 to the container's port 8000
+      - "8000:8000"
     volumes:
-      - ./backend:/app/backend # Mounts your local backend code for live reloading
+      - ./backend:/app/backend
     env_file:
-      - .env # Provides the API key to the container
+      - .env
 
-  # The RAG Service (rag_service.py)
   rag_service:
     build:
       context: .
       dockerfile: Dockerfile
     command: uvicorn backend.rag_service:app --host 0.0.0.0 --port 8001
     volumes:
-      # Mounts your local rag_kb folder into the container for live updates
       - ./rag_kb:/app/rag_kb
-      # Mounts your local rag_db folder to persist the vector database
       - ./rag_db:/app/rag_db
 
-  # The Frontend Service (Nginx Web Server)
   frontend:
     build:
       context: .
       dockerfile: Dockerfile.frontend
     ports:
-      - "8080:80" # Connects your computer's port 8080 to the container's port 80
+      - "8080:80"
     depends_on:
-      - orchestrator # Ensures the backend starts up before the frontend is accessible
-
-```
-
----
-
+      - orchestrator
