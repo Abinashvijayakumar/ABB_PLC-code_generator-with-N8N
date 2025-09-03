@@ -39,13 +39,13 @@ Convert the following user request:
 """
 
 # --- Testing the Prompt ---
-model = genai.GenerativeModel('gemini-1.5-flash')
+model = genai.GenerativeModel('gemini-2.5-flash')
 
 user_request = "If the tank level is greater than 90.5, turn on the high level alarm. Otherwise, turn it off."
 
 full_prompt = master_prompt + "\nNL: \"" + user_request + "\"\nJSON:"
 
-print("--- SENDING PROMPT TO GEMINI ---")
+print("--- SENDING PROMPT TO  ---")
 print(full_prompt)
 
 response = model.generate_content(full_prompt)
