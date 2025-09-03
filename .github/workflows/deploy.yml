@@ -20,7 +20,7 @@ jobs:
         # LUCCI'S FIX: The 'uses' line below is the corrected version.
 
         # This resolves the "repository not found" error.
-        uses: huggingface/huggingface-space-push-action@v1
+        uses: huggingface/hub-action@v1
         with:
           # This uses your exact repo_id from our previous discussions.
           repo_id: Abinash123aj/PLC_CODE_ASSISTANT
