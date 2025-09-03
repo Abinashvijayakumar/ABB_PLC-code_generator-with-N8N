@@ -118,7 +118,27 @@ services:
     depends_on:
       - orchestrator # Ensures the backend starts before the frontend
 
-```
+###### Your Final Action Plan
 
----
+You now have all the necessary code. The next steps are simple but must be done precisely.
+
+1.  **Prepare Your `requirements.txt`:** Ensure this file is clean and contains all necessary packages. It should look something like this:
+    ```
+    fastapi
+    uvicorn[standard]
+    python-dotenv
+    google-generativeai
+    requests
+    langchain
+    langchain-community
+    sentence-transformers
+    chromadb
+    pypdf
+    ```
+2.  **Create the Dockerfiles:** Create the three files I provided (`Dockerfile`, `Dockerfile.frontend`, `docker-compose.yml`) in your project's root directory.
+3.  **Launch the Entire Application:** Open your terminal in the project root directory and run the single master command:
+    ```bash
+    docker-compose up --build
+    
+
 
