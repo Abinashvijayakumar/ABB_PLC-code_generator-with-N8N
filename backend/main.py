@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
 import google.generativeai as genai
+import time
 
 # --- 1. SETUP AND CONFIGURATION ---
 load_dotenv()
@@ -99,6 +100,7 @@ def generate_from_llm(user_prompt: str) -> dict:
 # --- 3. THE MAIN API ENDPOINT WITH SELF-CORRECTION ---
 @app.post("/generate")
 def generate_and_verify_endpoint(prompt: Prompt):
+    time.sleep(1) # Simulate work for a better UX, allows loading messages to be seen
     print(f"Received prompt: {prompt.prompt}")
     
     # --- STAGE 1: Initial Generation ---
