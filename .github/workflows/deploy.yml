@@ -17,10 +17,7 @@ jobs:
           lfs: true
 
       - name: Push to Hugging Face Space
-        # LUCCI FIX 1: Using a more specific and stable version of the action (v1.3)
-        # This resolves the "repository not found" error.
-        uses: huggingface/space-push@v1.3
+        uses: huggingface/huggingface-space-push-action@v1
         with:
-          # LUCCI FIX 2: Using your exact repo_id from the link you provided
           repo_id: Abinash123aj/PLC_CODE_ASSISTANT
           token: ${{ secrets.HF_TOKEN }}
