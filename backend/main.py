@@ -13,7 +13,7 @@ import google.generativeai as genai
 load_dotenv()
 try:
     api_key = os.getenv("GOOGLE_API_KEY")
-    if not api_key: raise ValueError("GOOGLE_API_KEY not found")
+    if not api_key: raise ValueError("GOOGLE_API_KEY not found in .env file or environment variables.")
     genai.configure(api_key=api_key)
     print("✅ Google AI SDK configured successfully.")
 except Exception as e:
@@ -53,12 +53,13 @@ class Prompt(BaseModel): prompt: str
 
 # --- 4. HELPER FUNCTIONS ---
 def call_rag_service(prompt: str) -> list:
+    rag_service_url = "http://rag_service:8001/query-kb"
     try:
-        response = requests.post("http://rag_service:8001/query-kb", json={"prompt": prompt})
+        response = requests.post(rag_service_url, json={"prompt": prompt}, timeout=5)
         response.raise_for_status()
         return response.json().get("snippets", [])
     except requests.exceptions.RequestException as e:
-        print(f"⚠️ WARNING: Could not connect to RAG service: {e}. Proceeding without RAG.")
+        print(f"⚠️ WARNING: Could not connect to RAG service at {rag_service_url}: {e}. Proceeding without RAG.")
         return []
 
 def generate_from_llm(user_prompt: str, is_correction=False) -> dict:
@@ -68,7 +69,8 @@ def generate_from_llm(user_prompt: str, is_correction=False) -> dict:
         cleaned_response = response.text.replace("```json", "").replace("```", "").strip()
         return json.loads(cleaned_response)
     except Exception as e:
-        print(f"❌ ERROR: Failed to parse JSON from LLM response: {e}\nRaw AI Output:\n---\n{response.text}\n---")
+        raw_output = response.text if 'response' in locals() else "No response from model."
+        print(f"❌ ERROR: Failed to parse JSON from LLM response: {e}\nRaw AI Output:\n---\n{raw_output}\n---")
         raise HTTPException(status_code=500, detail="The AI returned a malformed response.")
 
 # --- 5. MAIN API ENDPOINT ---
@@ -76,7 +78,6 @@ def generate_from_llm(user_prompt: str, is_correction=False) -> dict:
 def generate_and_verify_endpoint(prompt: Prompt):
     print(f"Received prompt: {prompt.prompt}")
 
-    # Step A: Augment with RAG
     print("A. Calling RAG service for relevant examples...")
     rag_snippets = call_rag_service(prompt.prompt)
     rag_context = "\n\n".join(rag_snippets)
@@ -85,7 +86,6 @@ def generate_and_verify_endpoint(prompt: Prompt):
         print("   ...RAG context found. Injecting into prompt.")
         user_prompt += f"\n\nHere is some relevant context from our knowledge base to help you:\n---\n{rag_context}\n---"
     
-    # Step 1: Initial Generation
     print("1. Calling LLM for initial generation...")
     generated_json = generate_from_llm(user_prompt)
     
@@ -97,9 +97,8 @@ def generate_and_verify_endpoint(prompt: Prompt):
         raise HTTPException(status_code=500, detail="AI returned an unknown response type.")
 
     print("✅ Intent is 'generate_code'. Proceeding to self-correction review.")
-    time.sleep(1) # Simulate work for UX
+    time.sleep(1)
 
-    # Step 2: AI Self-Correction Review
     print("2. Sending code back to LLM for self-correction review...")
     correction_user_prompt = f"Please review and correct the following generated JSON:\n\n{json.dumps(generated_json)}"
     final_json = generate_from_llm(correction_user_prompt, is_correction=True)
@@ -109,19 +108,4 @@ def generate_and_verify_endpoint(prompt: Prompt):
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
-```
-
----
-
-### **Step 3: Set up Git LFS and the Final Deployment Workflow**
-
-This is the definitive fix for your deployment error.
-
-1.  **Install Git LFS on your local machine.** If you don't have it, download and install it from [https://git-lfs.github.com/](https://git-lfs.github.com/).
-2.  **Set up LFS in your project.** Open a terminal in your project's root folder and run these commands one by one:
-    ```bash
-    git lfs install
-    git lfs track "*.pdf"
-    git add .gitattributes
-    
 

@@ -25,3 +25,31 @@ jobs:
           git remote add hf "https://Abinash123aj:$HF_TOKEN@huggingface.co/spaces/Abinash123aj/PLC_CODE_ASSISTANT"
           git push hf main --force
 
+name: Deploy to Hugging Face Spaces
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy-to-hub:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          # This is the crucial step that correctly handles LFS files
+          lfs: true
+
+      - name: Deploy to Hugging Face using Git Push
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          git config --global user.email "actions@github.com"
+          git config --global user.name "GitHub Actions"
+          git remote add hf "https://Abinash123aj:$HF_TOKEN@huggingface.co/spaces/Abinash123aj/PLC_CODE_ASSISTANT"
+          # This push command now works because the large files are handled by LFS
+          git push hf main --force
+

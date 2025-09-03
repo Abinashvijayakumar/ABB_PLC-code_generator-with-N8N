@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const validationText = document.getElementById('validationText');
     const clearChatBtn = document.getElementById('refreshChatBtn');
     const attachFileBtn = document.getElementById('attachFileBtn');
-    const fileInput = document.getElementById('fileInput');
+    const fileAttachmentInput = document.getElementById('fileAttachmentInput');
     const downloadBtn = document.getElementById('downloadBtn');
     const copyCodeBtn = document.getElementById('copyCodeBtn');
     const themeToggleBtn = document.getElementById('themeToggleBtn');
@@ -30,8 +30,8 @@ document.addEventListener('DOMContentLoaded', function () {
     sendPromptBtn.addEventListener('click', sendPrompt);
     promptInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendPrompt(); } });
     clearChatBtn.addEventListener('click', clearChat);
-    attachFileBtn.addEventListener('click', () => fileInput.click());
-    fileInput.addEventListener('change', (e) => showNotification(`File "${e.target.files[0].name}" attached. (Feature coming soon)`, 'info'));
+    attachFileBtn.addEventListener('click', () => fileAttachmentInput.click());
+    fileAttachmentInput.addEventListener('change', (e) => showNotification(`File "${e.target.files[0].name}" attached. (Feature coming soon)`, 'info'));
     downloadBtn.addEventListener('click', downloadCode);
     copyCodeBtn.addEventListener('click', () => copyToClipboard(codeCanvas.value));
     themeToggleBtn.addEventListener('click', toggleTheme);
@@ -41,55 +41,6 @@ document.addEventListener('DOMContentLoaded', function () {
     // --- 💡 INITIALIZATION ---
     loadHistory();
     loadTheme();
-
-    // --- 🤖 CORE AI FUNCTIONS ---
-    async function sendPrompt() {
-        const userInput = promptInput.value.trim();
-        if (!userInput) return;
-
-        addMessage('user', userInput);
-        promptInput.value = '';
-        setLoading(true, "Contacting AI Orchestrator...");
-
-        try {
-            const response = await fetch(ORCHESTRATOR_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prompt: userInput })
-            });
-
-            if (!response.ok) throw new Error(`Server error: ${response.status}`);
-            const result = await response.json();
-            
-            setLoading(true, "AI is performing self-correction review...");
-
-            setTimeout(() => { // Simulate review time
-                if (result.response_type === "chat") {
-                    addMessage('assistant', result.message);
-                } else if (result.response_type === "plc_code") {
-                    populateOutputs(result.final_json);
-                    updateValidationIndicator(true);
-                }
-                setLoading(false);
-            }, 1500);
-
-        } catch (error) {
-            console.error("Error:", error);
-            addMessage('assistant', `⚠️ An error occurred: ${error.message}`);
-            updateValidationIndicator(false);
-            setLoading(false);
-        }
-    }
-
-    function populateOutputs(data) {
-        addMessage('assistant', data.explanation);
-        codeCanvas.value = data.structured_text || "";
-        variablesOutput.textContent = data.required_variables || "";
-        simulationOutput.textContent = data.simulation_trace || "";
-        verificationNotesOutput.textContent = data.verification_notes || "";
-        hljs.highlightElement(variablesOutput);
-        hljs.highlightElement(simulationOutput);
-    }
 
     // --- 🎨 UI & UX FUNCTIONS ---
     function switchTab(tab) {
@@ -104,21 +55,25 @@ document.addEventListener('DOMContentLoaded', function () {
         loadingStatus.textContent = statusText;
     }
 
-    function updateValidationIndicator(isSuccess) {
+    function updateValidationIndicator(isSuccess, message = '') {
         validationIndicator.className = 'validation-indicator';
-        if (isSuccess) {
+        if (isSuccess === null) {
+            validationIndicator.classList.add('pending');
+            validationIcon.className = 'fas fa-circle';
+            validationText.textContent = 'Awaiting Code';
+        } else if (isSuccess) {
             validationIndicator.classList.add('success');
             validationIcon.className = 'fas fa-check-circle';
             validationText.textContent = 'Verified';
         } else {
             validationIndicator.classList.add('error');
             validationIcon.className = 'fas fa-times-circle';
-            validationText.textContent = 'Error';
+            validationText.textContent = message || 'Error';
         }
     }
 
     function showHelp() {
-        addMessage('assistant', "This is the PLC Co-pilot, an AI assistant for automation tasks. To use me:\n\n1.  **Describe Logic:** Type a description of the automation task you want to perform in the prompt box.\n\n2.  **Generate:** Press Send, and I will generate the Structured Text code, variable declarations, and a simulation trace.\n\n3.  **Review & Edit:** The generated code appears in an editable canvas on the right. You can modify it as needed.\n\n4.  **Download:** Use the download button to save your code as a `.st` file.");
+        addMessage('system-info', "This is the PLC Co-pilot, an AI assistant for automation tasks. To use me:\n\n1.  **Describe Logic:** Type a description of the automation task you want to perform in the prompt box.\n\n2.  **Generate:** Press Send, and I will generate the Structured Text code, variable declarations, and a simulation trace.\n\n3.  **Review & Edit:** The generated code appears in an editable canvas on the right. You can modify it as needed.\n\n4.  **Download:** Use the download button to save your code as a `.st` file.");
     }
 
     // --- 💾 HISTORY & THEME ---
@@ -140,7 +95,15 @@ document.addEventListener('DOMContentLoaded', function () {
         if (history) {
             chatHistory = JSON.parse(history);
             chatMessages.innerHTML = ''; // Clear initial message
-            chatHistory.forEach(msg => addMessage(msg.type, msg.content));
+            chatHistory.forEach(msg => {
+                // To prevent re-adding to history on load, we call the create/append logic directly
+                const sanitizedContent = DOMPurify.sanitize(msg.content);
+                const messageDiv = document.createElement('div');
+                messageDiv.className = msg.type === 'user' ? 'user-message' : 'system-message';
+                messageDiv.innerHTML = `<p>${sanitizedContent.replace(/\n/g, '<br>')}</p>`;
+                chatMessages.appendChild(messageDiv);
+            });
+            chatMessages.scrollTop = chatMessages.scrollHeight;
         }
     }
 
@@ -152,17 +115,21 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     
     function toggleTheme() {
-        document.body.classList.toggle('dark-mode');
-        document.body.classList.toggle('light-mode');
-        const theme = document.body.classList.contains('dark-mode') ? 'dark' : 'light';
+        const htmlEl = document.documentElement;
+        htmlEl.classList.toggle('dark-mode');
+        htmlEl.classList.toggle('light-mode');
+        const theme = htmlEl.classList.contains('dark-mode') ? 'dark' : 'light';
         localStorage.setItem('plcTheme', theme);
     }
 
     function loadTheme() {
         const theme = localStorage.getItem('plcTheme');
         if (theme === 'dark') {
-            document.body.classList.add('dark-mode');
-            document.body.classList.remove('light-mode');
+            document.documentElement.classList.add('dark-mode');
+            document.documentElement.classList.remove('light-mode');
+        } else {
+            document.documentElement.classList.add('light-mode');
+            document.documentElement.classList.remove('dark-mode');
         }
     }
     
@@ -201,6 +168,57 @@ document.addEventListener('DOMContentLoaded', function () {
             notification.classList.remove('show');
             setTimeout(() => notification.remove(), 300);
         }, 3000);
+    }
+
+    // --- 🤖 CORE AI FUNCTIONS ---
+    async function sendPrompt() {
+        const userInput = promptInput.value.trim();
+        if (!userInput) return;
+
+        addMessage('user', userInput);
+        promptInput.value = '';
+        setLoading(true, "Contacting AI Orchestrator...");
+        updateValidationIndicator(null); // Reset indicator
+
+        try {
+            const response = await fetch(ORCHESTRATOR_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt: userInput })
+            });
+
+            if (!response.ok) throw new Error(`Server error: ${response.status}`);
+            const result = await response.json();
+            
+            setLoading(true, "AI is performing self-correction review...");
+
+            setTimeout(() => { // Simulate review time
+                if (result.response_type === "chat") {
+                    addMessage('assistant', result.message);
+                } else if (result.response_type === "plc_code") {
+                    populateOutputs(result.final_json);
+                    updateValidationIndicator(true);
+                }
+                setLoading(false);
+            }, 1500);
+
+        } catch (error) {
+            console.error("Error:", error);
+            addMessage('assistant', `⚠️ An error occurred: ${error.message}`);
+            updateValidationIndicator(false, 'Failed');
+            setLoading(false);
+        }
+    }
+
+    function populateOutputs(data) {
+        addMessage('assistant', data.explanation);
+        codeCanvas.value = data.structured_text || "";
+        variablesOutput.textContent = data.required_variables || "";
+        simulationOutput.textContent = data.simulation_trace || "";
+        verificationNotesOutput.textContent = data.verification_notes || "";
+        // Highlight.js doesn't work well on <textarea>, so we highlight the <pre> blocks
+        if(variablesOutput.textContent) hljs.highlightElement(variablesOutput);
+        if(simulationOutput.textContent) hljs.highlightElement(simulationOutput);
     }
 });
 
