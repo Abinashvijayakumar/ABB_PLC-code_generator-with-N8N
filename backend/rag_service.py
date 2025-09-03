@@ -26,7 +26,7 @@ app = FastAPI()
 def load_and_split_documents():
     """Loads PDFs from the source folder and splits them into chunks."""
     if not os.path.exists(SOURCE_DOCUMENTS_PATH) or not os.listdir(SOURCE_DOCUMENTS_PATH):
-        print(f"⚠️ No documents found in {SOURCE_DOCUMENTS_PATH}. The knowledge base will be empty.")
+        print(f"⚠ No documents found in {SOURCE_DOCUMENTS_PATH}. The knowledge base will be empty.")
         return []
         
     print(f"📚 Loading documents from: {SOURCE_DOCUMENTS_PATH}")
@@ -48,7 +48,7 @@ def rebuild_vector_database():
     try:
         # 1. Delete the old database if it exists
         if os.path.exists(PERSISTENT_STORAGE_PATH):
-            print(f"🗑️ Deleting old database at: {PERSISTENT_STORAGE_PATH}")
+            print(f"🗑 Deleting old database at: {PERSISTENT_STORAGE_PATH}")
             shutil.rmtree(PERSISTENT_STORAGE_PATH)
 
         # 2. Load and process new documents
@@ -117,79 +117,3 @@ async def startup_event():
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8001)
-```
-
----
-
-### **Step 2: Update the `docker-compose.yml` to Use Volumes**
-
-Now we tell Docker about our new data-centric approach.
-
-**Action:** Replace your `docker-compose.yml` with this updated version. I have added the `volumes` section.
-
-```yaml
-# File: docker-compose.yml
-# This file defines and runs our entire multi-container application.
-
-version: '3.8'
-
-services:
-  # The Main Orchestrator Service (main.py)
-  orchestrator:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    command: uvicorn backend.main:app --host 0.0.0.0 --port 8000
-    ports:
-      - "8000:8000"
-    volumes:
-      - ./backend:/app/backend # Mount local code for live reloading
-    env_file:
-      - .env
-
-  # The RAG Service (rag_service.py)
-  rag_service:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    command: uvicorn backend.rag_service:app --host 0.0.0.0 --port 8001
-    volumes:
-      # This is the magic:
-      # Mounts the local rag_kb folder into the container
-      - ./rag_kb:/app/rag_kb
-      # Mounts a local folder to store the persistent database
-      - ./rag_db:/app/rag_db
-
-  # The Frontend Service (Nginx)
-  frontend:
-    build:
-      context: .
-      dockerfile: Dockerfile.frontend
-    ports:
-      - "8080:80" # We will access the UI on http://localhost:8080
-    depends_on:
-      - orchestrator # Ensures the backend starts before the frontend
-
-```
-
----
-
-### **Step 3: The Final Workflow**
-
-Your project is now fully professionalized.
-
-1.  **Place Your PDFs:** Create a folder named `rag_kb` in your project's root directory. Place the PDF books you want to use inside this folder.
-2.  **Build and Run Everything:** Launch your entire application with a single command:
-    ```bash
-    docker-compose up --build
-    ```
-    * On the very first launch, the RAG service will detect that there is no database. It will automatically read the PDFs from `rag_kb`, process them, and build the vector store inside a new `rag_db` folder.
-3.  **Use the Application:** Your main application at `http://localhost:8080` will now be supercharged with knowledge from your PDF books.
-4.  **Update Your Knowledge:**
-    * Stop the containers (`Ctrl+C`).
-    * Add, remove, or change the PDF files in your local `rag_kb` folder.
-    * Restart the containers: `docker-compose up`.
-    * The RAG service will start, see the existing `rag_db`, and use it. To force it to re-read the new PDFs, you will now send a `POST` request to the re-indexing endpoint (e.g., using PowerShell or a simple script):
-        ```powershell
-        Invoke-RestMethod -Uri "http://localhost:8001/rebuild-index" -Method POST
-        
