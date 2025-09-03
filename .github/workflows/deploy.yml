@@ -1,0 +1,21 @@
+name: Deploy to Hugging Face Spaces
+
+on:
+  push:
+    branches:
+      - main # This workflow runs ONLY when you push to the 'main' branch
+
+jobs:
+  deploy-to-hub:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          lfs: true
+
+      - name: Push to Hugging Face Space
+        uses: huggingface/space-push@v1
+        with:
+          repo_id: ${{ secrets.HF_USERNAME }}/[PLC_CODE_ASSISTANT] # CHANGE THIS
+          token: ${{ secrets.HF_TOKEN }}
