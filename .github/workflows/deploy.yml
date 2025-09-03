@@ -11,13 +11,28 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
+        # This step checks out a copy of your repository in the runner
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
           lfs: true
 
-      - name: Push to Hugging Face Space
-        uses: huggingface/hub-action@v1
-        with:
-         repo_id: Abinash123aj/PLC_CODE_ASSISTANT
-         token: ${{ secrets.HF_TOKEN }}
+      - name: Deploy to Hugging Face using Git Push
+        # LUCCI'S FIX: This step implements your proposed git push method.
+        # It is a robust alternative to the failing 'space-push' action.
+        env:
+          # The HF_TOKEN is made available as an environment variable inside the script
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          # Configure Git with a generic user identity for this automated action
+          git config --global user.email "actions@github.com"
+          git config --global user.name "GitHub Actions"
+
+          # Add the Hugging Face Space as a new remote repository called 'hf'
+          # This command uses your HF_TOKEN to authenticate securely.
+          git remote add hf "https://Abinash123aj:$HF_TOKEN@huggingface.co/spaces/Abinash123aj/PLC_CODE_ASSISTANT"
+
+          # Force-push the main branch of your repository to the main branch of the Hugging Face Space
+          # The --force flag ensures the Space is an exact mirror of your repository.
+          git push hf main --force
+
