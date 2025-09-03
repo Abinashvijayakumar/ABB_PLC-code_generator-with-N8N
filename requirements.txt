@@ -1,17 +1,17 @@
-# Core Requirements for PLC AI Generator
+# Core FastAPI for services
+fastapi
+uvicorn[standard]
 
-# For the User Interface
-streamlit==1.32.2
-
-# For Google Gemini API communication
+# LLM SDK
 google-generativeai
-
-# For loading environment variables (API keys)
 python-dotenv
 
-# Vector Database for RAG (Must-Have for Day 2)
-chromadb==0.4.24
-sentence-transformers==2.5.1
+# RAG / Vector Store
+chromadb
+langchain
+sentence-transformers
 
-# fastAPi
-fastapi[all]
+# For making requests between services
+requests
+langchain-community
+pypdf

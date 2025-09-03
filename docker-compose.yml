@@ -1,17 +1,31 @@
-# docker-compose.yml
-version: '3.7'
 
 services:
-  n8n:
-    image: n8nio/n8n
-    container_name: n8n_plc_generator
-    restart: always
+  orchestrator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: uvicorn backend.main:app --host 0.0.0.0 --port 8000
     ports:
-      - "5678:5678"
-    environment:
-      - GENERIC_TIMEZONE=Asia/Kolkata
+      - "8000:8000"
     volumes:
-      - ./n8n_data:/home/node/.n8n
+      - ./backend:/app/backend
+    env_file:
+      - .env
 
-volumes:
-  n8n_data:
+  rag_service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: uvicorn backend.rag_service:app --host 0.0.0.0 --port 8001
+    volumes:
+      - ./rag_kb:/app/rag_kb
+      - ./rag_db:/app/rag_db
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - orchestrator

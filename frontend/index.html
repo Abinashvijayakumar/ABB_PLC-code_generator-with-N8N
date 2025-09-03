@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prompt to PLC - AI Software</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="logo">
+                <h1>Prompt to PLC</h1>
+            </div>
+            <div class="header-controls">
+                <button class="btn btn-secondary"><i class="fas fa-cog"></i> Settings</button>
+                <button class="btn btn-primary"><i class="fas fa-question-circle"></i> Help</button>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <section class="prompt-section">
+                <div class="section-header">
+                    <h2>Prompt Input</h2>
+                    <div class="section-controls">
+                        <button class="btn btn-small" title="Clear Prompt"><i class="fas fa-trash"></i></button>
+                        <button class="btn btn-small" id="uploadPLCBtn" title="Upload PLC Program"><i class="fas fa-file-upload"></i> Upload PLC</button>
+                        <button class="btn btn-small" title="Rewrite Options"><i class="fas fa-sync-alt"></i></button>
+                    </div>
+                </div>
+                <div class="chat-container">
+                    <div class="chat-messages" id="chatMessages">
+                        <div class="system-message">
+                            <p>Welcome to Prompt to PLC! Describe your PLC requirements, and I'll generate structured text code for you.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="chat-input-container">
+                        <textarea id="promptInput" placeholder="Describe your PLC requirements here..."></textarea>
+                        <button class="btn btn-icon" title="Attach File"><i class="fas fa-paperclip"></i></button>
+                        <button class="btn btn-primary" id="sendPrompt"><i class="fas fa-paper-plane"></i> Send</button>
+                    </div>
+                </div>
+            </section>
+
+            <section class="output-section">
+                <div class="section-header">
+                    <h2 id="outputTitle">Generated Output</h2>
+                    <div class="section-controls">
+                        <select id="formatSelector" class="format-selector">
+                            <option value="st">Structured Text</option>
+                            
+                        </select>
+                        <button class="btn btn-small" title="Copy Code"><i class="fas fa-copy"></i></button>
+                        <button class="btn btn-small" id="downloadBtn" title="Download Code"><i class="fas fa-download"></i> Download</button>
+                        <button class="btn btn-small" id="validateBtn" title="Validate Code"><i class="fas fa-check-circle"></i></button>
+                    </div>
+                </div>
+
+                <div class="output-tabs">
+                    <button class="tab-button active" data-tab="code">Structured Text</button>
+                    <button class="tab-button" data-tab="vars">Variables</button>
+                    <button class="tab-button" data-tab="sim">Simulation</button>
+                </div>
+                <div class="output-content">
+                    <div id="code-tab" class="tab-pane active">
+                        <pre><code id="codeOutput" class="language-iecst">// Generated structured text will appear here</code></pre>
+                    </div>
+                    <div id="vars-tab" class="tab-pane">
+                        <pre><code id="variablesOutput" class="language-iecst">// Declared variables will appear here</code></pre>
+                    </div>
+                    <div id="sim-tab" class="tab-pane">
+                        <pre><code id="simulationOutput">// The simulation trace will appear here</code></pre>
+                    </div>
+                </div>
+                <div class="verification-notes-container">
+                    <h4><i class="fas fa-shield-alt"></i> Verification Notes</h4>
+                    <p id="verificationNotesOutput">AI's analysis will appear here...</p>
+                </div>
+
+                </section>
+        </main>
+
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
