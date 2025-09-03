@@ -18,9 +18,9 @@ jobs:
 
       - name: Push to Hugging Face Space
         # LUCCI'S FIX: The 'uses' line below is the corrected version.
-        # It points to the correct tool 'huggingface/space-push' and uses a stable version tag '@v1.3'.
+
         # This resolves the "repository not found" error.
-        uses:  huggingface/huggingface-action@v0.5.0
+        uses: huggingface/huggingface-space-push-action@v1
         with:
           # This uses your exact repo_id from our previous discussions.
           repo_id: Abinash123aj/PLC_CODE_ASSISTANT
