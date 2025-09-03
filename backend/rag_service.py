@@ -77,6 +77,7 @@ class Query(BaseModel):
 
 @app.post("/query-kb")
 def query_knowledge_base(query: Query):
+        print(f"🧠 RAG Service received query: {query.prompt}") # <-- ADD THIS LINE
     """
     Searches the vector database for documents relevant to the user's prompt.
     """
