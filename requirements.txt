@@ -13,3 +13,5 @@ sentence-transformers
 
 # For making requests between services
 requests
+langchain-community
+pypdf
