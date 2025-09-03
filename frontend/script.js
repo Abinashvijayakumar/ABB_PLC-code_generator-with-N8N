@@ -1,130 +1,55 @@
-// FINAL UNIFIED SCRIPT - Works with Self-Correction Engine
-
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     // --- 💻 DOM ELEMENTS ---
-    const chatMessages = document.getElementById('chatMessages');
-    const promptInput = document.getElementById('promptInput');
     const sendPromptBtn = document.getElementById('sendPrompt');
-    
-    // Output Elements from Tabbed View
-    const codeOutput = document.getElementById('codeOutput');
+    const promptInput = document.getElementById('promptInput');
+    const chatMessages = document.getElementById('chatMessages');
+    const codeCanvas = document.getElementById('codeCanvas');
     const variablesOutput = document.getElementById('variablesOutput');
     const simulationOutput = document.getElementById('simulationOutput');
     const verificationNotesOutput = document.getElementById('verificationNotesOutput');
-
-    // Button Elements
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    const loadingStatus = document.getElementById('loadingStatus');
+    const validationIndicator = document.getElementById('validationIndicator');
+    const validationIcon = document.getElementById('validationIcon');
+    const validationText = document.getElementById('validationText');
+    const clearChatBtn = document.getElementById('refreshChatBtn');
+    const attachFileBtn = document.getElementById('attachFileBtn');
+    const fileInput = document.getElementById('fileInput');
     const downloadBtn = document.getElementById('downloadBtn');
-    const validateBtn = document.getElementById('validateBtn');
-    const copyBtn = document.querySelector('[title="Copy Code"]');
-    
-    // Tab Elements
+    const copyCodeBtn = document.getElementById('copyCodeBtn');
+    const themeToggleBtn = document.getElementById('themeToggleBtn');
+    const helpBtn = document.getElementById('helpBtn');
     const tabs = document.querySelectorAll('.tab-button');
     const panes = document.querySelectorAll('.tab-pane');
 
-    // --- 🎯 API ENDPOINTS ---
+    // --- 🎯 API ENDPOINT ---
     const ORCHESTRATOR_URL = 'http://localhost:8000/generate';
+    let chatHistory = []; // Req 5: Chat History
 
     // --- 🚀 EVENT LISTENERS ---
     sendPromptBtn.addEventListener('click', sendPrompt);
-    promptInput.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            sendPrompt();
-        }
-    });
+    promptInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendPrompt(); } });
+    clearChatBtn.addEventListener('click', clearChat);
+    attachFileBtn.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', (e) => showNotification(`File "${e.target.files[0].name}" attached. (Feature coming soon)`, 'info'));
+    downloadBtn.addEventListener('click', downloadCode);
+    copyCodeBtn.addEventListener('click', () => copyToClipboard(codeCanvas.value));
+    themeToggleBtn.addEventListener('click', toggleTheme);
+    helpBtn.addEventListener('click', showHelp);
+    tabs.forEach(tab => tab.addEventListener('click', () => switchTab(tab)));
 
-    if (validateBtn) validateBtn.addEventListener('click', () => showNotification("Manual validation is no longer needed; code is reviewed by the AI automatically!", 'info'));
-    if (downloadBtn) downloadBtn.addEventListener('click', downloadCode);
-    if (copyBtn) copyBtn.addEventListener('click', () => copyToClipboard(codeOutput.textContent));
+    // --- 💡 INITIALIZATION ---
+    loadHistory();
+    loadTheme();
 
-    // Tab switching logic
-    if (tabs.length > 0) {
-        tabs.forEach(tab => {
-            tab.addEventListener('click', () => {
-                tabs.forEach(t => t.classList.remove('active'));
-                panes.forEach(p => p.classList.remove('active'));
-                tab.classList.add('active');
-                const targetPaneId = tab.getAttribute('data-tab');
-                document.getElementById(`${targetPaneId}-tab`).classList.add('active');
-            });
-        });
-    }
-
-    // --- 🛠️ HELPER & UTILITY FUNCTIONS ---
-
-    // MOVED POPULATEOUTPUTS HERE - TO ENSURE IT'S DEFINED BEFORE IT IS CALLED
-    function populateOutputs(data) {
-        if (!data) {
-            addMessage('assistant', 'Received an empty response from the server.');
-            return;
-        }
-        if (data.explanation) {
-            addMessage('assistant', data.explanation);
-        } else {
-            addMessage('assistant', "Generated PLC logic received. See output panels for details.");
-        }
-        variablesOutput.textContent = data.required_variables || "// No variables declared.";
-        codeOutput.textContent = data.structured_text || "// No code generated.";
-        simulationOutput.textContent = data.simulation_trace || "No simulation trace provided.";
-        verificationNotesOutput.textContent = data.verification_notes || "No verification notes provided.";
-
-        if (typeof hljs !== 'undefined') {
-            hljs.highlightAll();
-        }
-    }
-
-    function addMessage(type, content) {
-        const messageDiv = document.createElement('div');
-        messageDiv.className = type === 'user' ? 'user-message' : 'system-message';
-        const messageP = document.createElement('p');
-        messageP.textContent = content;
-        messageDiv.appendChild(messageP);
-        chatMessages.appendChild(messageDiv);
-        chatMessages.scrollTop = chatMessages.scrollHeight;
-    }
-
-    function copyToClipboard(text) {
-        navigator.clipboard.writeText(text).then(() => {
-            showNotification('Code copied to clipboard!', 'success');
-        }).catch(err => {
-            console.error('Failed to copy text: ', err);
-            showNotification('Failed to copy code.', 'error');
-        });
-    }
-
-    function downloadCode() {
-        const codeToDownload = codeOutput.textContent;
-        const blob = new Blob([codeToDownload], { type: 'text/plain;charset=utf-8' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'program.st';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-    }
-    
-    function showNotification(message, type = 'info') {
-        const existingNotif = document.querySelector('.notification');
-        if (existingNotif) {
-            existingNotif.remove();
-        }
-        const notification = document.createElement('div');
-        notification.className = `notification ${type}`;
-        notification.textContent = message;
-        document.body.appendChild(notification);
-        setTimeout(() => { notification.remove(); }, 4000);
-    }
-
-    // --- 🤖 CORE AI FUNCTION ---
+    // --- 🤖 CORE AI FUNCTIONS ---
     async function sendPrompt() {
         const userInput = promptInput.value.trim();
         if (!userInput) return;
 
         addMessage('user', userInput);
         promptInput.value = '';
-        showNotification('Contacting AI Orchestrator...', 'info');
+        setLoading(true, "Contacting AI Orchestrator...");
 
         try {
             const response = await fetch(ORCHESTRATOR_URL, {
@@ -133,27 +58,149 @@ document.addEventListener('DOMContentLoaded', function() {
                 body: JSON.stringify({ prompt: userInput })
             });
 
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-            
+            if (!response.ok) throw new Error(`Server error: ${response.status}`);
             const result = await response.json();
-            console.log("Received from FastAPI Orchestrator:", result);
             
-            if (result.response_type === "chat") {
-                addMessage('assistant', result.message);
-                showNotification('Received a message.', 'success');
-            } else if (result.response_type === "plc_code") {
-                populateOutputs(result.final_json); // Now this function is guaranteed to exist
-                showNotification(`Code received. AI self-review complete.`, 'success');
-            } else {
-                addMessage('assistant', "Sorry, I received an unexpected response from the server.");
-                showNotification('Received an unknown response type.', 'error');
-            }
+            setLoading(true, "AI is performing self-correction review...");
+
+            setTimeout(() => { // Simulate review time
+                if (result.response_type === "chat") {
+                    addMessage('assistant', result.message);
+                } else if (result.response_type === "plc_code") {
+                    populateOutputs(result.final_json);
+                    updateValidationIndicator(true);
+                }
+                setLoading(false);
+            }, 1500);
+
         } catch (error) {
-            console.error("Error sending to FastAPI Orchestrator:", error);
-            const errorMessage = "⚠️ Error: Could not reach the AI Orchestrator server. Is main.py running?";
-            addMessage('assistant', errorMessage);
-            showNotification('Error: Could not reach the main server.', 'error');
+            console.error("Error:", error);
+            addMessage('assistant', `⚠️ An error occurred: ${error.message}`);
+            updateValidationIndicator(false);
+            setLoading(false);
         }
+    }
+
+    function populateOutputs(data) {
+        addMessage('assistant', data.explanation);
+        codeCanvas.value = data.structured_text || "";
+        variablesOutput.textContent = data.required_variables || "";
+        simulationOutput.textContent = data.simulation_trace || "";
+        verificationNotesOutput.textContent = data.verification_notes || "";
+        hljs.highlightElement(variablesOutput);
+        hljs.highlightElement(simulationOutput);
+    }
+
+    // --- 🎨 UI & UX FUNCTIONS ---
+    function switchTab(tab) {
+        tabs.forEach(t => t.classList.remove('active'));
+        panes.forEach(p => p.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById(`${tab.dataset.tab}-tab`).classList.add('active');
+    }
+
+    function setLoading(isLoading, statusText) {
+        loadingOverlay.classList.toggle('hidden', !isLoading);
+        loadingStatus.textContent = statusText;
+    }
+
+    function updateValidationIndicator(isSuccess) {
+        validationIndicator.className = 'validation-indicator';
+        if (isSuccess) {
+            validationIndicator.classList.add('success');
+            validationIcon.className = 'fas fa-check-circle';
+            validationText.textContent = 'Verified';
+        } else {
+            validationIndicator.classList.add('error');
+            validationIcon.className = 'fas fa-times-circle';
+            validationText.textContent = 'Error';
+        }
+    }
+
+    function showHelp() {
+        addMessage('assistant', "This is the PLC Co-pilot, an AI assistant for automation tasks. To use me:\n\n1.  **Describe Logic:** Type a description of the automation task you want to perform in the prompt box.\n\n2.  **Generate:** Press Send, and I will generate the Structured Text code, variable declarations, and a simulation trace.\n\n3.  **Review & Edit:** The generated code appears in an editable canvas on the right. You can modify it as needed.\n\n4.  **Download:** Use the download button to save your code as a `.st` file.");
+    }
+
+    // --- 💾 HISTORY & THEME ---
+    function addMessage(type, content) {
+        const sanitizedContent = DOMPurify.sanitize(content);
+        const messageDiv = document.createElement('div');
+        messageDiv.className = type === 'user' ? 'user-message' : 'system-message';
+        messageDiv.innerHTML = `<p>${sanitizedContent.replace(/\n/g, '<br>')}</p>`;
+        chatMessages.appendChild(messageDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+        if (type !== 'system-info') {
+            chatHistory.push({ type, content });
+            localStorage.setItem('plcChatHistory', JSON.stringify(chatHistory));
+        }
+    }
+    
+    function loadHistory() {
+        const history = localStorage.getItem('plcChatHistory');
+        if (history) {
+            chatHistory = JSON.parse(history);
+            chatMessages.innerHTML = ''; // Clear initial message
+            chatHistory.forEach(msg => addMessage(msg.type, msg.content));
+        }
+    }
+
+    function clearChat() {
+        chatHistory = [];
+        localStorage.removeItem('plcChatHistory');
+        chatMessages.innerHTML = '<div class="system-message"><p>Chat history cleared. How can I help you?</p></div>';
+        showNotification('Chat history cleared!', 'info');
+    }
+    
+    function toggleTheme() {
+        document.body.classList.toggle('dark-mode');
+        document.body.classList.toggle('light-mode');
+        const theme = document.body.classList.contains('dark-mode') ? 'dark' : 'light';
+        localStorage.setItem('plcTheme', theme);
+    }
+
+    function loadTheme() {
+        const theme = localStorage.getItem('plcTheme');
+        if (theme === 'dark') {
+            document.body.classList.add('dark-mode');
+            document.body.classList.remove('light-mode');
+        }
+    }
+    
+    // --- 🛠️ UTILITIES ---
+    function downloadCode() {
+        const fileName = prompt("Enter the file name (e.g., 'motor_logic'):", "program");
+        if (fileName === null || fileName.trim() === "") {
+            showNotification('Download cancelled.', 'info');
+            return;
+        }
+        const codeToDownload = codeCanvas.value;
+        const blob = new Blob([codeToDownload], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${fileName.trim()}.st`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
+    function copyToClipboard(text) {
+        navigator.clipboard.writeText(text).then(() => {
+            showNotification('Code copied to clipboard!', 'success');
+        }).catch(err => showNotification('Failed to copy code.', 'error'));
+    }
+
+    function showNotification(message, type = 'info') {
+        const notification = document.createElement('div');
+        notification.className = `notification ${type}`;
+        notification.textContent = message;
+        document.body.appendChild(notification);
+        setTimeout(() => notification.classList.add('show'), 10);
+        setTimeout(() => {
+            notification.classList.remove('show');
+            setTimeout(() => notification.remove(), 300);
+        }, 3000);
     }
 });
 

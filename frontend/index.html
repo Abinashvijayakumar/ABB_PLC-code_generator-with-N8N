@@ -1,66 +1,55 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="light-mode">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Prompt to PLC - AI Software</title>
+    <title>PLC Co-pilot | AI-Powered Code Generation</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css" id="hljs-theme">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
 </head>
 <body>
     <div class="container">
         <header class="header">
             <div class="logo">
-                <h1>Prompt to PLC</h1>
+                <h1><i class="fas fa-robot"></i> PLC Co-pilot</h1>
             </div>
             <div class="header-controls">
-                <button class="btn btn-secondary"><i class="fas fa-cog"></i> Settings</button>
-                <button class="btn btn-primary"><i class="fas fa-question-circle"></i> Help</button>
+                <button class="btn btn-secondary" id="helpBtn"><i class="fas fa-question-circle"></i> Help</button>
+                <button class="btn btn-secondary" id="themeToggleBtn" title="Toggle Theme"><i class="fas fa-moon"></i></button>
             </div>
         </header>
-
         <main class="main-content">
             <section class="prompt-section">
                 <div class="section-header">
-                    <h2>Prompt Input</h2>
-                    <div class="section-controls">
-                        <button class="btn btn-small" title="Clear Prompt"><i class="fas fa-trash"></i></button>
-                        <button class="btn btn-small" id="uploadPLCBtn" title="Upload PLC Program"><i class="fas fa-file-upload"></i> Upload PLC</button>
-                        <button class="btn btn-small" title="Rewrite Options"><i class="fas fa-sync-alt"></i></button>
-                    </div>
+                    <h2>Conversation</h2>
+                    <button class="btn btn-small" id="refreshChatBtn" title="Clear Chat History"><i class="fas fa-sync-alt"></i></button>
                 </div>
                 <div class="chat-container">
                     <div class="chat-messages" id="chatMessages">
                         <div class="system-message">
-                            <p>Welcome to Prompt to PLC! Describe your PLC requirements, and I'll generate structured text code for you.</p>
+                            <p>Welcome! Describe your PLC logic, and I will generate and review the code for you.</p>
                         </div>
                     </div>
-                    
                     <div class="chat-input-container">
-                        <textarea id="promptInput" placeholder="Describe your PLC requirements here..."></textarea>
-                        <button class="btn btn-icon" title="Attach File"><i class="fas fa-paperclip"></i></button>
-                        <button class="btn btn-primary" id="sendPrompt"><i class="fas fa-paper-plane"></i> Send</button>
+                        <textarea id="promptInput" placeholder="e.g., 'When the start button is pressed, run the main motor...'"></textarea>
+                        <input type="file" id="fileAttachmentInput" style="display: none;">
+                        <button class="btn btn-icon" id="attachFileBtn" title="Attach File (Future Feature)"><i class="fas fa-paperclip"></i></button>
+                        <button class="btn btn-primary" id="sendPrompt"><i class="fas fa-paper-plane"></i></button>
                     </div>
                 </div>
             </section>
-
             <section class="output-section">
                 <div class="section-header">
-                    <h2 id="outputTitle">Generated Output</h2>
-                    <div class="section-controls">
-                        <select id="formatSelector" class="format-selector">
-                            <option value="st">Structured Text</option>
-                            
-                        </select>
-                        <button class="btn btn-small" title="Copy Code"><i class="fas fa-copy"></i></button>
-                        <button class="btn btn-small" id="downloadBtn" title="Download Code"><i class="fas fa-download"></i> Download</button>
-                        <button class="btn btn-small" id="validateBtn" title="Validate Code"><i class="fas fa-check-circle"></i></button>
+                    <h2>Generated Output</h2>
+                     <div id="validationIndicator" class="validation-indicator pending" title="Code Status">
+                        <i id="validationIcon" class="fas fa-circle"></i>
+                        <span id="validationText">Awaiting Code</span>
                     </div>
                 </div>
-
                 <div class="output-tabs">
                     <button class="tab-button active" data-tab="code">Structured Text</button>
                     <button class="tab-button" data-tab="vars">Variables</button>
@@ -68,25 +57,31 @@
                 </div>
                 <div class="output-content">
                     <div id="code-tab" class="tab-pane active">
-                        <pre><code id="codeOutput" class="language-iecst">// Generated structured text will appear here</code></pre>
+                        <textarea id="codeCanvas" class="code-canvas" spellcheck="false">// Code will appear here...</textarea>
                     </div>
                     <div id="vars-tab" class="tab-pane">
-                        <pre><code id="variablesOutput" class="language-iecst">// Declared variables will appear here</code></pre>
+                        <pre><code id="variablesOutput" class="language-iecst"></code></pre>
                     </div>
                     <div id="sim-tab" class="tab-pane">
-                        <pre><code id="simulationOutput">// The simulation trace will appear here</code></pre>
+                        <pre><code id="simulationOutput"></code></pre>
                     </div>
                 </div>
                 <div class="verification-notes-container">
-                    <h4><i class="fas fa-shield-alt"></i> Verification Notes</h4>
+                    <h4><i class="fas fa-shield-alt"></i> AI Verification Notes</h4>
                     <p id="verificationNotesOutput">AI's analysis will appear here...</p>
                 </div>
-
-                </section>
+                <div class="output-controls">
+                     <button class="btn btn-secondary" id="copyCodeBtn"><i class="fas fa-copy"></i> Copy Code</button>
+                     <button class="btn btn-primary" id="downloadBtn"><i class="fas fa-download"></i> Download Code</button>
+                </div>
+            </section>
         </main>
-
+        <div id="loadingOverlay" class="loading-overlay hidden">
+            <div class="spinner"></div>
+            <p id="loadingStatus">Contacting AI Orchestrator...</p>
+        </div>
     </div>
-
     <script src="script.js"></script>
 </body>
 </html>
+
