@@ -23,6 +23,5 @@ jobs:
         uses: huggingface/space-push@v1.3
         with:
           # This uses your exact repo_id from our previous discussions.
-          repo_id: Abinash12aj/PLC_CODE_ASSISTANT
+          repo_id: Abinash123aj/PLC_CODE_ASSISTANT
           token: ${{ secrets.HF_TOKEN }}
-
