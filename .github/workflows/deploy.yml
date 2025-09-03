@@ -17,11 +17,7 @@ jobs:
           lfs: true
 
       - name: Push to Hugging Face Space
-        # LUCCI'S FIX: The 'uses' line below is the corrected version.
-
-        # This resolves the "repository not found" error.
         uses: huggingface/hub-action@v1
         with:
-          # This uses your exact repo_id from our previous discussions.
-          repo_id: Abinash123aj/PLC_CODE_ASSISTANT
-          token: ${{ secrets.HF_TOKEN }}
+         repo_id: Abinash123aj/PLC_CODE_ASSISTANT
+         token: ${{ secrets.HF_TOKEN }}
