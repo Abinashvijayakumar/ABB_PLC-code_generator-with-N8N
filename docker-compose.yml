@@ -1,6 +1,6 @@
 version: '3.8'
 
-# LUCCI'S FIX: Define a dedicated network for all our services
+# LUCCI'S FIX: Define a dedicated network for all our services to guarantee they can find each other.
 networks:
   plc-net:
     driver: bridge
@@ -16,6 +16,7 @@ services:
       - "8000:8000"
     env_file:
       - .env
+    # This now waits for the RAG service to be fully healthy before starting.
     depends_on:
       rag_service:
         condition: service_healthy
@@ -36,7 +37,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
-      start_period: 60s
+      start_period: 60s # Gives the service up to 60s to start up before the first check
     networks: # Assign to our network
       - plc-net
 
