@@ -15,3 +15,5 @@ sentence-transformers
 requests
 langchain-community
 pypdf
+langchain-huggingface
+langchain-chroma

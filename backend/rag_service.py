@@ -1,11 +1,12 @@
+import os
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from langchain_community.embeddings import SentenceTransformerEmbeddings
-from langchain_community.vectorstores import Chroma
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_chroma import Chroma
 import uvicorn
 
 PERSISTENT_STORAGE_PATH = "./rag_db"
-embedding_model = SentenceTransformerEmbeddings(model_name="all-MiniLM-L6-v2")
+embedding_model = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 app = FastAPI()
 
 # Load the database on startup
