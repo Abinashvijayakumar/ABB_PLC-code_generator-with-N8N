@@ -1,5 +1,10 @@
 version: '3.8'
 
+# LUCCI'S FIX: Define a dedicated network for all our services
+networks:
+  plc-net:
+    driver: bridge
+
 services:
   # The Main Orchestrator Service (main.py)
   orchestrator:
@@ -11,10 +16,11 @@ services:
       - "8000:8000"
     env_file:
       - .env
-    # LUCCI'S FIX: This now waits for the RAG service to be fully healthy before starting.
     depends_on:
       rag_service:
         condition: service_healthy
+    networks: # Assign to our network
+      - plc-net
 
   # The RAG Service (rag_service.py)
   rag_service:
@@ -25,13 +31,14 @@ services:
     volumes:
       - ./rag_kb:/app/rag_kb
       - ./rag_db:/app/rag_db
-    # LUCCI'S FIX: This tells Docker how to check if the service is ready.
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
       interval: 30s
       timeout: 10s
       retries: 5
-      start_period: 60s # Gives the service up to 60s to start up before the first check
+      start_period: 60s
+    networks: # Assign to our network
+      - plc-net
 
   # The Frontend Service (Nginx Web Server)
   frontend:
@@ -42,3 +49,5 @@ services:
       - "8080:80"
     depends_on:
       - orchestrator
+    networks: # Assign to our network
+      - plc-net
