@@ -2,7 +2,6 @@ import os
 import json
 import requests
 import uvicorn
-import time
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -10,14 +9,17 @@ from dotenv import load_dotenv
 import google.generativeai as genai
 
 # --- 1. SETUP AND CONFIGURATION ---
+# Load environment variables from a .env file
 load_dotenv()
 try:
+    # Configure the Google Generative AI SDK with the API key
     api_key = os.getenv("GOOGLE_API_KEY")
     if not api_key: raise ValueError("GOOGLE_API_KEY not found in .env file.")
     genai.configure(api_key=api_key)
     print("✅ Google AI SDK configured successfully.")
 except Exception as e:
-    print(f"❌ Error configuring SDK: {e}"); exit()
+    print(f"❌ Error configuring SDK: {e}")
+    exit()
 
 # --- 2. PROMPT ENGINEERING (Definitive v9.0) ---
 SYSTEM_PROMPT = """You are an expert-level PLC programming assistant. You are a precise, logical, and helpful AI that follows instructions perfectly.
@@ -50,9 +52,19 @@ USER_PROMPT_TEMPLATE = "<USER_REQUEST>{{ USER_PROMPT_GOES_HERE }}</USER_REQUEST>
 
 # --- 3. FASTAPI APP INITIALIZATION ---
 app = FastAPI()
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
-class Prompt(BaseModel): prompt: str
+# Configure CORS (Cross-Origin Resource Sharing) to allow web frontends to connect
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allows all origins for simplicity; restrict in production
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows all methods (GET, POST, etc.)
+    allow_headers=["*"],  # Allows all headers
+)
+
+# Define the request data model using Pydantic for automatic validation
+class Prompt(BaseModel):
+    prompt: str
 
 # --- 4. HELPER FUNCTIONS ---
 def call_rag_service(prompt: str) -> list:
@@ -67,9 +79,17 @@ def call_rag_service(prompt: str) -> list:
 
 def generate_from_llm(user_prompt: str, is_correction=False) -> dict:
     try:
+        # Select the persona based on whether this is a correction step
         system_instruction = SELF_CORRECTION_PROMPT if is_correction else SYSTEM_PROMPT
-        model = genai.GenerativeModel(model_name='gemini-1.5-flash', system_instruction=system_instruction)
+        model = genai.GenerativeModel(
+            model_name='gemini-1.5-flash',
+            system_instruction=system_instruction
+        )
+        
+        # Generate content from the model
         response = model.generate_content(user_prompt)
+        
+        # Clean the response to ensure it's valid JSON
         cleaned_response = response.text.replace("```json", "").replace("```", "").strip()
         return json.loads(cleaned_response)
     except Exception as e:
@@ -104,5 +124,38 @@ def generate_and_verify_endpoint(prompt: Prompt):
     print("3. Self-correction review complete.")
     return {"response_type": "plc_code", "final_json": final_json}
 
+    # Step 2: Construct the initial prompt for the "expert" AI persona
+    initial_user_prompt = (
+        f"Here is some context from the knowledge base:\n---CONTEXT---\n{rag_context}\n---END CONTEXT---\n\n"
+        f"Based on this context and your expertise, please fulfill the following user request: '{prompt.prompt}'"
+    )
+
+    # Step 3: Make the first call to the LLM to generate the initial code
+    print("➡️ Making initial generation call to LLM...")
+    initial_json_response = generate_from_llm(
+        user_prompt=initial_user_prompt,
+        original_user_input=prompt.prompt,
+        is_correction=False  # Use the main SYSTEM_PROMPT
+    )
+
+    # Step 4: Construct the prompt for the "reviewer" AI persona
+    correction_user_prompt = (
+        f"Please review and correct the following JSON output which was generated for the user request: '{prompt.prompt}'. "
+        f"Ensure it is syntactically correct and adheres to all best practices.\n\n"
+        f"```json\n{json.dumps(initial_json_response, indent=2)}\n```"
+    )
+
+    # Step 5: Make the second call to the LLM for self-correction
+    print("➡️ Making self-correction call to LLM...")
+    final_json = generate_from_llm(
+        user_prompt=correction_user_prompt,
+        original_user_input=prompt.prompt,
+        is_correction=True # Use the SELF_CORRECTION_PROMPT
+    )
+    
+    return {"response_type": "plc_code", "data": final_json}
+
+# --- 6. SERVER EXECUTION ---
 if __name__ == "__main__":
+    # Run the FastAPI server using uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
