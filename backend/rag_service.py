@@ -2,20 +2,25 @@ import os
 import shutil
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
+# --- UPDATED IMPORTS ---
 from langchain_community.document_loaders import PyPDFDirectoryLoader
+from langchain_community.embeddings import SentenceTransformerEmbeddings
+from langchain_community.vectorstores import Chroma
+# ---
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.embeddings import SentenceTransformerEmbeddings
-from langchain.vectorstores import Chroma
 import uvicorn
 
 # --- CONFIGURATION ---
-SOURCE_DOCUMENTS_PATH = "./rag_kb" 
+SOURCE_DOCUMENTS_PATH = "./rag_kb"
 PERSISTENT_STORAGE_PATH = "./rag_db"
+
+# This line now uses the updated class name, but the logic is the same.
+# It will trigger the download from Hugging Face.
 embedding_model = SentenceTransformerEmbeddings(model_name="all-MiniLM-L6-v2")
 
+# The rest of your rag_service.py code remains the same...
 app = FastAPI()
 
-# --- HELPER FUNCTIONS ---
 def load_and_split_documents():
     if not os.path.exists(SOURCE_DOCUMENTS_PATH) or not os.listdir(SOURCE_DOCUMENTS_PATH):
         print(f"⚠️ No documents found in {SOURCE_DOCUMENTS_PATH}. The knowledge base will be empty.")
@@ -28,7 +33,6 @@ def load_and_split_documents():
     print(f"   ...found {len(documents)} document(s), split into {len(docs)} chunks.")
     return docs
 
-# --- API ENDPOINTS ---
 @app.post("/rebuild-index")
 def rebuild_vector_database():
     try:
@@ -69,4 +73,3 @@ async def startup_event():
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8001)
-
