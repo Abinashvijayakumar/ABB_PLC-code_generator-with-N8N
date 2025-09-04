@@ -10,7 +10,6 @@ from dotenv import load_dotenv
 import google.generativeai as genai
 
 # --- 1. SETUP AND CONFIGURATION ---
-# (This section remains the same)
 load_dotenv()
 try:
     api_key = os.getenv("GOOGLE_API_KEY")
@@ -21,9 +20,8 @@ except Exception as e:
     print(f"❌ Error configuring SDK: {e}"); exit()
 
 # --- 2. PROMPT ENGINEERING (Definitive Version) ---
-# (All your prompts remain the same)
-SYSTEM_PROMPT = """You are an expert PLC programmer and a helpful AI assistant..."""
-SELF_CORRECTION_PROMPT = """You are a PLC Syntax and Compatibility Reviewer..."""
+SYSTEM_PROMPT = """You are an expert PLC programmer and a helpful AI assistant...""" # (Your full v7.0 prompt here)
+SELF_CORRECTION_PROMPT = """You are a PLC Syntax and Compatibility Reviewer...""" # (Your full self-correction prompt here)
 USER_PROMPT_TEMPLATE = "User Request: \"{{ USER_PROMPT_GOES_HERE }}\""
 
 # --- 3. FASTAPI APP INITIALIZATION ---
@@ -34,64 +32,64 @@ class Prompt(BaseModel): prompt: str
 
 # --- 4. HELPER FUNCTIONS ---
 def call_rag_service(prompt: str) -> list:
-    # LUCCI'S FIX: The URL is now the Docker service name, not localhost.
-    # This allows the containers to communicate with each other.
     rag_service_url = "http://rag_service:8001/query-kb"
     try:
-        response = requests.post(rag_service_url, json={"prompt": prompt}, timeout=5)
+        response = requests.post(rag_service_url, json={"prompt": prompt}, timeout=10)
         response.raise_for_status()
         return response.json().get("snippets", [])
     except requests.exceptions.RequestException as e:
-        # This is the error you were seeing in the container logs.
-        print(f"⚠️ CRITICAL WARNING: Could not connect to RAG service at {rag_service_url}: {e}. Proceeding without RAG.")
+        print(f"⚠️ WARNING: Could not connect to RAG service at {rag_service_url}: {e}. Proceeding without RAG.")
         return []
 
-def generate_from_llm(user_prompt: str, is_correction=False) -> dict:
-    # (This function remains the same)
+def generate_from_llm(user_prompt: str, original_user_input: str, is_correction=False) -> dict:
+    # LUCCI'S FIX: This function is now more resilient to AI errors.
     try:
-        current_model = genai.GenerativeModel(model_name='gemini-1.5-flash', system_instruction=SELF_CORRECTION_PROMPT if is_correction else SYSTEM_PROMPT)
-        response = current_model.generate_content(user_prompt)
+        system_instruction = SELF_CORRECTION_PROMPT if is_correction else SYSTEM_PROMPT
+        model = genai.GenerativeModel(model_name='gemini-1.5-flash', system_instruction=system_instruction)
+        response = model.generate_content(user_prompt)
         cleaned_response = response.text.replace("```json", "").replace("```", "").strip()
         return json.loads(cleaned_response)
+    except json.JSONDecodeError as e:
+        print(f"⚠️ Initial JSON parse failed. Raw output was not JSON. Error: {e}")
+        # --- CHAT FALLBACK LOGIC ---
+        chat_keywords = ["hi", "hello", "thanks", "thank you", "hey"]
+        is_short_prompt = len(original_user_input.split()) <= 3
+        is_greeting = any(keyword in original_user_input.lower() for keyword in chat_keywords)
+
+        if is_short_prompt or is_greeting:
+            print("...Identified as likely chat. Wrapping raw response in chat JSON.")
+            return {"response_type": "chat", "message": response.text.strip()}
+        else:
+            print(f"❌ ERROR: Failed to parse JSON from a complex prompt.")
+            raise HTTPException(status_code=500, detail=f"The AI returned a malformed response: {response.text}")
     except Exception as e:
-        raw_output = response.text if 'response' in locals() else "No response from model."
-        print(f"❌ ERROR: Failed to parse JSON from LLM response: {e}\nRaw AI Output:\n---\n{raw_output}\n---")
-        raise HTTPException(status_code=500, detail="The AI returned a malformed response.")
+         raise HTTPException(status_code=500, detail=f"An unexpected error occurred with the AI model: {e}")
 
 # --- 5. MAIN API ENDPOINT ---
-# (This entire endpoint remains the same, as it already calls the helper function)
 @app.post("/generate")
 def generate_and_verify_endpoint(prompt: Prompt):
     print(f"Received prompt: {prompt.prompt}")
-
-    print("A. Calling RAG service for relevant examples...")
     rag_snippets = call_rag_service(prompt.prompt)
     rag_context = "\n\n".join(rag_snippets)
     user_prompt = USER_PROMPT_TEMPLATE.replace("{{ USER_PROMPT_GOES_HERE }}", prompt.prompt)
     if rag_context:
-        print("   ...RAG context found. Injecting into prompt.")
-        user_prompt += f"\n\nHere is some relevant context from our knowledge base to help you:\n---\n{rag_context}\n---"
+        user_prompt += f"\n\nContext:\n{rag_context}\n---"
     
-    print("1. Calling LLM for initial generation...")
-    generated_json = generate_from_llm(user_prompt)
+    generated_json = generate_from_llm(user_prompt, original_user_input=prompt.prompt)
     
     if generated_json.get("response_type") == "chat":
-        print("✅ Intent is 'chat'. Returning response.")
         return generated_json
 
     if generated_json.get("response_type") != "plc_code":
         raise HTTPException(status_code=500, detail="AI returned an unknown response type.")
 
-    print("✅ Intent is 'generate_code'. Proceeding to self-correction review.")
-    time.sleep(1)
-
-    print("2. Sending code back to LLM for self-correction review...")
+    time.sleep(1) # UX delay
+    
     correction_user_prompt = f"Please review and correct the following generated JSON:\n\n{json.dumps(generated_json)}"
-    final_json = generate_from_llm(correction_user_prompt, is_correction=True)
+    final_json = generate_from_llm(correction_user_prompt, original_user_input=prompt.prompt, is_correction=True)
 
     print("3. Self-correction review complete.")
     return {"response_type": "plc_code", "final_json": final_json}
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
-
