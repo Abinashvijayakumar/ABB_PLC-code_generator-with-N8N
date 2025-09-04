@@ -21,6 +21,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const helpBtn = document.getElementById('helpBtn');
     const tabs = document.querySelectorAll('.tab-button');
     const panes = document.querySelectorAll('.tab-pane');
+    const htmlEl = document.documentElement;
 
     // --- 🎯 API ENDPOINT ---
     const ORCHESTRATOR_URL = 'http://localhost:8000/generate';
@@ -96,14 +97,13 @@ document.addEventListener('DOMContentLoaded', function () {
             chatHistory = JSON.parse(history);
             chatMessages.innerHTML = ''; // Clear initial message
             chatHistory.forEach(msg => {
-                // To prevent re-adding to history on load, we call the create/append logic directly
                 const sanitizedContent = DOMPurify.sanitize(msg.content);
                 const messageDiv = document.createElement('div');
                 messageDiv.className = msg.type === 'user' ? 'user-message' : 'system-message';
                 messageDiv.innerHTML = `<p>${sanitizedContent.replace(/\n/g, '<br>')}</p>`;
                 chatMessages.appendChild(messageDiv);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
             });
-            chatMessages.scrollTop = chatMessages.scrollHeight;
         }
     }
 
@@ -115,7 +115,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     
     function toggleTheme() {
-        const htmlEl = document.documentElement;
         htmlEl.classList.toggle('dark-mode');
         htmlEl.classList.toggle('light-mode');
         const theme = htmlEl.classList.contains('dark-mode') ? 'dark' : 'light';
@@ -125,11 +124,11 @@ document.addEventListener('DOMContentLoaded', function () {
     function loadTheme() {
         const theme = localStorage.getItem('plcTheme');
         if (theme === 'dark') {
-            document.documentElement.classList.add('dark-mode');
-            document.documentElement.classList.remove('light-mode');
+            htmlEl.classList.add('dark-mode');
+            htmlEl.classList.remove('light-mode');
         } else {
-            document.documentElement.classList.add('light-mode');
-            document.documentElement.classList.remove('dark-mode');
+            htmlEl.classList.add('light-mode');
+            htmlEl.classList.remove('dark-mode');
         }
     }
     
@@ -187,7 +186,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 body: JSON.stringify({ prompt: userInput })
             });
 
-            if (!response.ok) throw new Error(`Server error: ${response.status}`);
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.detail || `Server error: ${response.status}`);
+            }
             const result = await response.json();
             
             setLoading(true, "AI is performing self-correction review...");
@@ -195,6 +197,7 @@ document.addEventListener('DOMContentLoaded', function () {
             setTimeout(() => { // Simulate review time
                 if (result.response_type === "chat") {
                     addMessage('assistant', result.message);
+                    updateValidationIndicator(true); // Chat is always 'valid'
                 } else if (result.response_type === "plc_code") {
                     populateOutputs(result.final_json);
                     updateValidationIndicator(true);
@@ -216,7 +219,6 @@ document.addEventListener('DOMContentLoaded', function () {
         variablesOutput.textContent = data.required_variables || "";
         simulationOutput.textContent = data.simulation_trace || "";
         verificationNotesOutput.textContent = data.verification_notes || "";
-        // Highlight.js doesn't work well on <textarea>, so we highlight the <pre> blocks
         if(variablesOutput.textContent) hljs.highlightElement(variablesOutput);
         if(simulationOutput.textContent) hljs.highlightElement(simulationOutput);
     }
