@@ -17,7 +17,7 @@ COPY ./backend /app/backend
 
 # Copy the RAG knowledge base directory into the container
 # This is for the initial build. The volume will override this for live updates.
-COPY ./rag_kb /app/rag_kb
+COPY ./rag_db /app/rag_db
 
 # Copy the .env file for the API key
 COPY .env .
