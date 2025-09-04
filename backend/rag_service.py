@@ -21,6 +21,14 @@ embedding_model = SentenceTransformerEmbeddings(model_name="all-MiniLM-L6-v2")
 # The rest of your rag_service.py code remains the same...
 app = FastAPI()
 
+
+# --- LUCCI'S FIX: ADD THIS HEALTH CHECK ENDPOINT ---
+@app.get("/health")
+def health_check():
+    """A simple endpoint that Docker can use to check if the service is running."""
+    return {"status": "ok"}
+
+
 def load_and_split_documents():
     if not os.path.exists(SOURCE_DOCUMENTS_PATH) or not os.listdir(SOURCE_DOCUMENTS_PATH):
         print(f"⚠ No documents found in {SOURCE_DOCUMENTS_PATH}. The knowledge base will be empty.")
