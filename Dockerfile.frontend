@@ -1,0 +1,8 @@
+# Use the official, lightweight Nginx web server image
+FROM nginx:alpine
+
+# Copy our static frontend files (HTML, CSS, JS) into the Nginx web server's public directory
+COPY ./frontend /usr/share/nginx/html
+
+# The container will listen on the default web port 80
+EXPOSE 80

@@ -1,187 +1,206 @@
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     // --- 💻 DOM ELEMENTS ---
-    const chatMessages = document.getElementById('chatMessages');
-    const promptInput = document.getElementById('promptInput');
     const sendPromptBtn = document.getElementById('sendPrompt');
-    const formatSelector = document.getElementById('formatSelector');
-    
-    // New Output Elements
-    const codeOutput = document.getElementById('codeOutput');
+    const promptInput = document.getElementById('promptInput');
+    const chatMessages = document.getElementById('chatMessages');
+    const codeCanvas = document.getElementById('codeCanvas');
     const variablesOutput = document.getElementById('variablesOutput');
     const simulationOutput = document.getElementById('simulationOutput');
     const verificationNotesOutput = document.getElementById('verificationNotesOutput');
-
-    // Button Elements
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    const loadingStatus = document.getElementById('loadingStatus');
+    const validationIndicator = document.getElementById('validationIndicator');
+    const validationIcon = document.getElementById('validationIcon');
+    const validationText = document.getElementById('validationText');
+    const clearChatBtn = document.getElementById('refreshChatBtn');
+    const attachFileBtn = document.getElementById('attachFileBtn');
+    const fileInput = document.getElementById('fileInput');
     const downloadBtn = document.getElementById('downloadBtn');
-    const validateBtn = document.getElementById('validateBtn'); // Ensure your button has this ID
-    const copyBtn = document.querySelector('[title="Copy Code"]'); // A way to select the copy button
-    
-    // Tab Elements
+    const copyCodeBtn = document.getElementById('copyCodeBtn');
+    const themeToggleBtn = document.getElementById('themeToggleBtn');
+    const helpBtn = document.getElementById('helpBtn');
     const tabs = document.querySelectorAll('.tab-button');
     const panes = document.querySelectorAll('.tab-pane');
 
-    // n8n Webhook URL
-    const N8N_WEBHOOK_URL = 'http://localhost:5678/webhook/plc-generator?sessionId=my-conversation-1'; // Your n8n URL
+    // --- 🎯 API ENDPOINT ---
+    const ORCHESTRATOR_URL = 'http://localhost:8000/generate';
+    let chatHistory = []; // Req 5: Chat History
 
     // --- 🚀 EVENT LISTENERS ---
     sendPromptBtn.addEventListener('click', sendPrompt);
-    promptInput.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            sendPrompt();
-        }
-    });
-
-    validateBtn.addEventListener('click', validateCode);
+    promptInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendPrompt(); } });
+    clearChatBtn.addEventListener('click', clearChat);
+    attachFileBtn.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', (e) => showNotification(`File "${e.target.files[0].name}" attached. (Feature coming soon)`, 'info'));
     downloadBtn.addEventListener('click', downloadCode);
-    copyBtn.addEventListener('click', () => copyToClipboard(codeOutput.textContent));
+    copyCodeBtn.addEventListener('click', () => copyToClipboard(codeCanvas.value));
+    themeToggleBtn.addEventListener('click', toggleTheme);
+    helpBtn.addEventListener('click', showHelp);
+    tabs.forEach(tab => tab.addEventListener('click', () => switchTab(tab)));
 
-    // Tab switching logic
-    tabs.forEach(tab => {
-        tab.addEventListener('click', () => {
-            // Deactivate all tabs and panes
-            tabs.forEach(t => t.classList.remove('active'));
-            panes.forEach(p => p.classList.remove('active'));
-
-            // Activate the clicked tab and corresponding pane
-            tab.classList.add('active');
-            const targetPaneId = tab.getAttribute('data-tab');
-            document.getElementById(`${targetPaneId}-tab`).classList.add('active');
-        });
-    });
-
+    // --- 💡 INITIALIZATION ---
+    loadHistory();
+    loadTheme();
 
     // --- 🤖 CORE AI FUNCTIONS ---
-
     async function sendPrompt() {
         const userInput = promptInput.value.trim();
         if (!userInput) return;
 
         addMessage('user', userInput);
         promptInput.value = '';
-        showNotification('Sending prompt to AI...', 'info');
+        setLoading(true, "Contacting AI Orchestrator...");
 
         try {
-            const response = await fetch(N8N_WEBHOOK_URL, {
+            const response = await fetch(ORCHESTRATOR_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ prompt: userInput })
             });
 
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-            
+            if (!response.ok) throw new Error(`Server error: ${response.status}`);
             const result = await response.json();
-            console.log("Received from n8n:", result);
             
-            // Populate the UI with the full, structured response
-            populateOutputs(result);
+            setLoading(true, "AI is performing self-correction review...");
+
+            setTimeout(() => { // Simulate review time
+                if (result.response_type === "chat") {
+                    addMessage('assistant', result.message);
+                } else if (result.response_type === "plc_code") {
+                    populateOutputs(result.final_json);
+                    updateValidationIndicator(true);
+                }
+                setLoading(false);
+            }, 1500);
 
         } catch (error) {
-            console.error("Error sending to n8n:", error);
-            addMessage('assistant', "⚠️ Error: Could not reach the AI server.");
+            console.error("Error:", error);
+            addMessage('assistant', `⚠️ An error occurred: ${error.message}`);
+            updateValidationIndicator(false);
+            setLoading(false);
         }
     }
 
     function populateOutputs(data) {
-        // Add explanation to chat
-        if (data.explanation) {
-            addMessage('assistant', data.explanation);
+        addMessage('assistant', data.explanation);
+        codeCanvas.value = data.structured_text || "";
+        variablesOutput.textContent = data.required_variables || "";
+        simulationOutput.textContent = data.simulation_trace || "";
+        verificationNotesOutput.textContent = data.verification_notes || "";
+        hljs.highlightElement(variablesOutput);
+        hljs.highlightElement(simulationOutput);
+    }
+
+    // --- 🎨 UI & UX FUNCTIONS ---
+    function switchTab(tab) {
+        tabs.forEach(t => t.classList.remove('active'));
+        panes.forEach(p => p.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById(`${tab.dataset.tab}-tab`).classList.add('active');
+    }
+
+    function setLoading(isLoading, statusText) {
+        loadingOverlay.classList.toggle('hidden', !isLoading);
+        loadingStatus.textContent = statusText;
+    }
+
+    function updateValidationIndicator(isSuccess) {
+        validationIndicator.className = 'validation-indicator';
+        if (isSuccess) {
+            validationIndicator.classList.add('success');
+            validationIcon.className = 'fas fa-check-circle';
+            validationText.textContent = 'Verified';
         } else {
-            addMessage('assistant', "Generated PLC logic received. See output panels for details.");
-        }
-
-        // Populate the output panes
-        variablesOutput.textContent = data.required_variables || "// No variables declared.";
-        codeOutput.textContent = data.structured_text || "// No code generated.";
-        simulationOutput.textContent = data.simulation_trace || "No simulation trace provided.";
-        verificationNotesOutput.textContent = data.verification_notes || "No verification notes provided.";
-
-        // Re-run the syntax highlighter after updating content
-        // You MUST include highlight.js in your HTML for this to work
-        if (typeof hljs !== 'undefined') {
-            hljs.highlightAll();
+            validationIndicator.classList.add('error');
+            validationIcon.className = 'fas fa-times-circle';
+            validationText.textContent = 'Error';
         }
     }
 
-    // --- ✅ VERIFICATION FUNCTION ---
-    async function validateCode() {
-        const codeToValidate = codeOutput.textContent;
-        if (!codeToValidate || codeToValidate.startsWith("//")) {
-            showNotification('Nothing to validate.', 'warning');
-            return;
-        }
-
-        showNotification('Sending code for validation...', 'info');
-        const VERIFICATION_SERVICE_URL = 'http://localhost:8002/verify'; // Member 3's service URL
-
-        try {
-            const response = await fetch(VERIFICATION_SERVICE_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ st_code: codeToValidate })
-            });
-
-            if (!response.ok) throw new Error(`Server responded with status: ${response.status}`);
-
-            const validationResult = await response.json();
-
-            if (validationResult.status === 'success') {
-                showNotification('Validation Successful: Syntax OK!', 'success');
-            } else {
-                addMessage('assistant', `⚠️ Validation Failed:\n${validationResult.details}`);
-                showNotification(`Validation Failed: Check chat for error details.`, 'error');
-            }
-
-        } catch (error) {
-            console.error("Error connecting to validation service:", error);
-            addMessage('assistant', '⚠️ Error: Could not reach the validation server. Make sure the service is running.');
-            showNotification('Error: Could not reach the validation server.', 'error');
-        }
+    function showHelp() {
+        addMessage('assistant', "This is the PLC Co-pilot, an AI assistant for automation tasks. To use me:\n\n1.  **Describe Logic:** Type a description of the automation task you want to perform in the prompt box.\n\n2.  **Generate:** Press Send, and I will generate the Structured Text code, variable declarations, and a simulation trace.\n\n3.  **Review & Edit:** The generated code appears in an editable canvas on the right. You can modify it as needed.\n\n4.  **Download:** Use the download button to save your code as a `.st` file.");
     }
 
-
-    // --- 🛠️ UTILITY FUNCTIONS ---
-
+    // --- 💾 HISTORY & THEME ---
     function addMessage(type, content) {
+        const sanitizedContent = DOMPurify.sanitize(content);
         const messageDiv = document.createElement('div');
         messageDiv.className = type === 'user' ? 'user-message' : 'system-message';
-        const messageP = document.createElement('p');
-        messageP.textContent = content;
-        messageDiv.appendChild(messageP);
+        messageDiv.innerHTML = `<p>${sanitizedContent.replace(/\n/g, '<br>')}</p>`;
         chatMessages.appendChild(messageDiv);
         chatMessages.scrollTop = chatMessages.scrollHeight;
+        if (type !== 'system-info') {
+            chatHistory.push({ type, content });
+            localStorage.setItem('plcChatHistory', JSON.stringify(chatHistory));
+        }
+    }
+    
+    function loadHistory() {
+        const history = localStorage.getItem('plcChatHistory');
+        if (history) {
+            chatHistory = JSON.parse(history);
+            chatMessages.innerHTML = ''; // Clear initial message
+            chatHistory.forEach(msg => addMessage(msg.type, msg.content));
+        }
     }
 
-    function copyToClipboard(text) {
-        navigator.clipboard.writeText(text).then(() => {
-            showNotification('Code copied to clipboard!', 'success');
-        }).catch(err => {
-            console.error('Failed to copy text: ', err);
-            showNotification('Failed to copy code.', 'error');
-        });
+    function clearChat() {
+        chatHistory = [];
+        localStorage.removeItem('plcChatHistory');
+        chatMessages.innerHTML = '<div class="system-message"><p>Chat history cleared. How can I help you?</p></div>';
+        showNotification('Chat history cleared!', 'info');
+    }
+    
+    function toggleTheme() {
+        document.body.classList.toggle('dark-mode');
+        document.body.classList.toggle('light-mode');
+        const theme = document.body.classList.contains('dark-mode') ? 'dark' : 'light';
+        localStorage.setItem('plcTheme', theme);
     }
 
+    function loadTheme() {
+        const theme = localStorage.getItem('plcTheme');
+        if (theme === 'dark') {
+            document.body.classList.add('dark-mode');
+            document.body.classList.remove('light-mode');
+        }
+    }
+    
+    // --- 🛠️ UTILITIES ---
     function downloadCode() {
-        const codeToDownload = codeOutput.textContent;
+        const fileName = prompt("Enter the file name (e.g., 'motor_logic'):", "program");
+        if (fileName === null || fileName.trim() === "") {
+            showNotification('Download cancelled.', 'info');
+            return;
+        }
+        const codeToDownload = codeCanvas.value;
         const blob = new Blob([codeToDownload], { type: 'text/plain;charset=utf-8' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'program.st';
+        a.download = `${fileName.trim()}.st`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
     }
-    
-    // A simple, non-library notification system
+
+    function copyToClipboard(text) {
+        navigator.clipboard.writeText(text).then(() => {
+            showNotification('Code copied to clipboard!', 'success');
+        }).catch(err => showNotification('Failed to copy code.', 'error'));
+    }
+
     function showNotification(message, type = 'info') {
         const notification = document.createElement('div');
-        notification.className = `notification ${type}`; // You'll need to style .notification .info .success .error
+        notification.className = `notification ${type}`;
         notification.textContent = message;
         document.body.appendChild(notification);
+        setTimeout(() => notification.classList.add('show'), 10);
         setTimeout(() => {
-            notification.remove();
-        }, 4000);
+            notification.classList.remove('show');
+            setTimeout(() => notification.remove(), 300);
+        }, 3000);
     }
 });
+
