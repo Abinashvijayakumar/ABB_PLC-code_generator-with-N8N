@@ -60,7 +60,7 @@ class Prompt(BaseModel): prompt: str
 def call_rag_service(prompt: str) -> list:
     # LUCCI'S FIX: The URL is now 'localhost' for local testing.
     # This will be changed back to 'rag_service' during the containerization step.
-    rag_service_url = "http://localhost:8001/query-kb"
+    rag_service_url = "http://rag_service:8001/query-kb"
     try:
         response = requests.post(rag_service_url, json={"prompt": prompt}, timeout=5)
         response.raise_for_status()
@@ -72,7 +72,7 @@ def call_rag_service(prompt: str) -> list:
 def generate_from_llm(user_prompt: str, is_correction=False) -> dict:
     try:
         system_instruction = SELF_CORRECTION_PROMPT if is_correction else SYSTEM_PROMPT
-        model = genai.GenerativeModel(model_name='gemini-1.5-flash', system_instruction=system_instruction)
+        model = genai.GenerativeModel(model_name='gemini-2.5-flash', system_instruction=system_instruction)
         response = model.generate_content(user_prompt)
         cleaned_response = response.text.replace("```json", "").replace("```", "").strip()
         return json.loads(cleaned_response)
