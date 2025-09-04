@@ -23,7 +23,7 @@ app = FastAPI()
 
 def load_and_split_documents():
     if not os.path.exists(SOURCE_DOCUMENTS_PATH) or not os.listdir(SOURCE_DOCUMENTS_PATH):
-        print(f"⚠️ No documents found in {SOURCE_DOCUMENTS_PATH}. The knowledge base will be empty.")
+        print(f"⚠ No documents found in {SOURCE_DOCUMENTS_PATH}. The knowledge base will be empty.")
         return []
     print(f"📚 Loading documents from: {SOURCE_DOCUMENTS_PATH}")
     loader = PyPDFDirectoryLoader(SOURCE_DOCUMENTS_PATH)
@@ -37,7 +37,7 @@ def load_and_split_documents():
 def rebuild_vector_database():
     try:
         if os.path.exists(PERSISTENT_STORAGE_PATH):
-            print(f"🗑️ Deleting old database at: {PERSISTENT_STORAGE_PATH}")
+            print(f"🗑 Deleting old database at: {PERSISTENT_STORAGE_PATH}")
             shutil.rmtree(PERSISTENT_STORAGE_PATH)
         docs = load_and_split_documents()
         if not docs:
