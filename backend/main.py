@@ -1,43 +1,72 @@
 import os
-import json
-import requests
-import uvicorn
-import time
+import shutil
 from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-import requests
-import os
+from langchain_community.document_loaders import PyPDFDirectoryLoader
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.embeddings import SentenceTransformerEmbeddings
+from langchain.vectorstores import Chroma
+import uvicorn
 
-# Define the data model for the incoming request from the React UI
-class GenerationRequest(BaseModel):
-    prompt: str
+# --- CONFIGURATION ---
+SOURCE_DOCUMENTS_PATH = "./rag_kb" 
+PERSISTENT_STORAGE_PATH = "./rag_db"
+embedding_model = SentenceTransformerEmbeddings(model_name="all-MiniLM-L6-v2")
 
-# Create the FastAPI app instance
 app = FastAPI()
 
-# A simple root endpoint to check if the API is running
-@app.get("/")
-def read_root():
-    return {"status": "PLC AI Generator API is running"}
+# --- HELPER FUNCTIONS ---
+def load_and_split_documents():
+    if not os.path.exists(SOURCE_DOCUMENTS_PATH) or not os.listdir(SOURCE_DOCUMENTS_PATH):
+        print(f"⚠️ No documents found in {SOURCE_DOCUMENTS_PATH}. The knowledge base will be empty.")
+        return []
+    print(f"📚 Loading documents from: {SOURCE_DOCUMENTS_PATH}")
+    loader = PyPDFDirectoryLoader(SOURCE_DOCUMENTS_PATH)
+    documents = loader.load()
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+    docs = text_splitter.split_documents(documents)
+    print(f"   ...found {len(documents)} document(s), split into {len(docs)} chunks.")
+    return docs
 
-# The main endpoint for code generation
-@app.post("/api/generate")
-def generate_code(request: GenerationRequest):
-    # Get the n8n webhook URL from Member 1
-    # For now, we can hardcode it. Later, we'll use environment variables.
-    n8n_webhook_url = "http://host.docker.internal:5678/webhook/..." # Use the URL from Member 1
-
+# --- API ENDPOINTS ---
+@app.post("/rebuild-index")
+def rebuild_vector_database():
     try:
-        # Forward the prompt to the n8n workflow
-        response = requests.post(n8n_webhook_url, json={"prompt": request.prompt})
-        
-        # Check for a successful response from n8n
-        if response.status_code == 200:
-            # Return the data from n8n directly to the React frontend
-            return response.json()
-        else:
-            return {"error": "Failed to get response from n8n workflow", "details": response.text}
-
+        if os.path.exists(PERSISTENT_STORAGE_PATH):
+            print(f"🗑️ Deleting old database at: {PERSISTENT_STORAGE_PATH}")
+            shutil.rmtree(PERSISTENT_STORAGE_PATH)
+        docs = load_and_split_documents()
+        if not docs:
+            return {"status": "success", "message": "Knowledge base is empty. No index was built."}
+        print("🧠 Creating new vector index...")
+        db = Chroma.from_documents(docs, embedding_model, persist_directory=PERSISTENT_STORAGE_PATH)
+        print("✅ New vector index built and saved successfully.")
+        return {"status": "success", "message": f"Index rebuilt with {len(docs)} document chunks."}
     except Exception as e:
-        return {"error": "An exception occurred", "details": str(e)}
+        raise HTTPException(status_code=500, detail=f"Failed to rebuild index: {e}")
+
+class Query(BaseModel):
+    prompt: str
+
+@app.post("/query-kb")
+def query_knowledge_base(query: Query):
+    if not os.path.exists(PERSISTENT_STORAGE_PATH):
+        return {"snippets": []}
+    try:
+        db = Chroma(persist_directory=PERSISTENT_STORAGE_PATH, embedding_function=embedding_model)
+        retriever = db.as_retriever(search_kwargs={'k': 3})
+        relevant_docs = retriever.get_relevant_documents(query.prompt)
+        snippets = [doc.page_content for doc in relevant_docs]
+        return {"snippets": snippets}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to query knowledge base: {e}")
+
+@app.on_event("startup")
+async def startup_event():
+    if not os.path.exists(PERSISTENT_STORAGE_PATH):
+        print("No existing database found. Building initial index...")
+        rebuild_vector_database()
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8001)
+
