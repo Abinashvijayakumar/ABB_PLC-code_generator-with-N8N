@@ -1,5 +1,7 @@
+version: '3.8'
 
 services:
+  # The Main Orchestrator Service (main.py)
   orchestrator:
     build:
       context: .
@@ -7,11 +9,14 @@ services:
     command: uvicorn backend.main:app --host 0.0.0.0 --port 8000
     ports:
       - "8000:8000"
-    volumes:
-      - ./backend:/app/backend
     env_file:
       - .env
+    # LUCCI'S FIX: This now waits for the RAG service to be fully healthy before starting.
+    depends_on:
+      rag_service:
+        condition: service_healthy
 
+  # The RAG Service (rag_service.py)
   rag_service:
     build:
       context: .
@@ -20,7 +25,15 @@ services:
     volumes:
       - ./rag_kb:/app/rag_kb
       - ./rag_db:/app/rag_db
+    # LUCCI'S FIX: This tells Docker how to check if the service is ready.
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s # Gives the service up to 60s to start up before the first check
 
+  # The Frontend Service (Nginx Web Server)
   frontend:
     build:
       context: .
