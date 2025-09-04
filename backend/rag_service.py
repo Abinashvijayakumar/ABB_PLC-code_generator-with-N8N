@@ -1,24 +1,34 @@
-import os
-import shutil
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from langchain_community.document_loaders import PyPDFDirectoryLoader
-from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.embeddings import SentenceTransformerEmbeddings
 from langchain_community.vectorstores import Chroma
 import uvicorn
 
-# --- CONFIGURATION ---
-SOURCE_DOCUMENTS_PATH = "./rag_kb" 
 PERSISTENT_STORAGE_PATH = "./rag_db"
 embedding_model = SentenceTransformerEmbeddings(model_name="all-MiniLM-L6-v2")
-
 app = FastAPI()
 
-@app.get("/health")
-def health_check():
-    """A simple endpoint that Docker can use to check if the service is running."""
-    return {"status": "ok"}
+# Load the database on startup
+if not os.path.exists(PERSISTENT_STORAGE_PATH):
+    raise RuntimeError("❌ RAG database not found! Please run 'build_rag_index.py' first.")
 
-# ...(The rest of the RAG service code is the same as the final version I provided you)...
-# Make sure to include the /rebuild-index and /query-kb endpoints.
+print("🧠 Loading existing RAG database...")
+db = Chroma(persist_directory=PERSISTENT_STORAGE_PATH, embedding_function=embedding_model)
+retriever = db.as_retriever(search_kwargs={'k': 3})
+print("✅ RAG database loaded successfully.")
+
+class Query(BaseModel):
+    prompt: str
+
+@app.post("/query-kb")
+def query_knowledge_base(query: Query):
+    try:
+        relevant_docs = retriever.get_relevant_documents(query.prompt)
+        snippets = [doc.page_content for doc in relevant_docs]
+        return {"snippets": snippets}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to query knowledge base: {e}")
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8001)
+    

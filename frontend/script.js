@@ -25,14 +25,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // --- 🎯 API ENDPOINT ---
     const ORCHESTRATOR_URL = 'http://localhost:8000/generate';
-    let chatHistory = []; // Req 5: Chat History
+    let chatHistory = [];
 
     // --- 🚀 EVENT LISTENERS ---
     sendPromptBtn.addEventListener('click', sendPrompt);
     promptInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendPrompt(); } });
     clearChatBtn.addEventListener('click', clearChat);
     attachFileBtn.addEventListener('click', () => fileAttachmentInput.click());
-    fileAttachmentInput.addEventListener('change', (e) => showNotification(`File "${e.target.files[0].name}" attached. (Feature coming soon)`, 'info'));
+    fileAttachmentInput.addEventListener('change', handleFileUpload);
     downloadBtn.addEventListener('click', downloadCode);
     copyCodeBtn.addEventListener('click', () => copyToClipboard(codeCanvas.value));
     themeToggleBtn.addEventListener('click', toggleTheme);
@@ -95,15 +95,8 @@ document.addEventListener('DOMContentLoaded', function () {
         const history = localStorage.getItem('plcChatHistory');
         if (history) {
             chatHistory = JSON.parse(history);
-            chatMessages.innerHTML = ''; // Clear initial message
-            chatHistory.forEach(msg => {
-                const sanitizedContent = DOMPurify.sanitize(msg.content);
-                const messageDiv = document.createElement('div');
-                messageDiv.className = msg.type === 'user' ? 'user-message' : 'system-message';
-                messageDiv.innerHTML = `<p>${sanitizedContent.replace(/\n/g, '<br>')}</p>`;
-                chatMessages.appendChild(messageDiv);
-                chatMessages.scrollTop = chatMessages.scrollHeight;
-            });
+            chatMessages.innerHTML = '';
+            chatHistory.forEach(msg => addMessage(msg.type, msg.content));
         }
     }
 
@@ -133,6 +126,22 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     
     // --- 🛠️ UTILITIES ---
+    function handleFileUpload(e) {
+        const file = e.target.files[0];
+        if (file && file.type === "text/plain") {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const fileContent = event.target.result;
+                promptInput.value += `\n\n--- CONTENT FROM ${file.name} ---\n${fileContent}`;
+                showNotification(`Content from ${file.name} added to prompt.`, 'info');
+            };
+            reader.readAsText(file);
+        } else if (file) {
+            showNotification('Please select a valid .txt file.', 'error');
+        }
+        e.target.value = null;
+    }
+
     function downloadCode() {
         const fileName = prompt("Enter the file name (e.g., 'motor_logic'):", "program");
         if (fileName === null || fileName.trim() === "") {
@@ -173,11 +182,10 @@ document.addEventListener('DOMContentLoaded', function () {
     async function sendPrompt() {
         const userInput = promptInput.value.trim();
         if (!userInput) return;
-
         addMessage('user', userInput);
         promptInput.value = '';
         setLoading(true, "Contacting AI Orchestrator...");
-        updateValidationIndicator(null); // Reset indicator
+        updateValidationIndicator(null);
 
         try {
             const response = await fetch(ORCHESTRATOR_URL, {
@@ -185,7 +193,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ prompt: userInput })
             });
-
             if (!response.ok) {
                 const err = await response.json();
                 throw new Error(err.detail || `Server error: ${response.status}`);
@@ -193,18 +200,16 @@ document.addEventListener('DOMContentLoaded', function () {
             const result = await response.json();
             
             setLoading(true, "AI is performing self-correction review...");
-
-            setTimeout(() => { // Simulate review time
+            setTimeout(() => {
                 if (result.response_type === "chat") {
                     addMessage('assistant', result.message);
-                    updateValidationIndicator(true); // Chat is always 'valid'
+                    updateValidationIndicator(true);
                 } else if (result.response_type === "plc_code") {
                     populateOutputs(result.final_json);
                     updateValidationIndicator(true);
                 }
                 setLoading(false);
             }, 1500);
-
         } catch (error) {
             console.error("Error:", error);
             addMessage('assistant', `⚠️ An error occurred: ${error.message}`);
@@ -222,5 +227,19 @@ document.addEventListener('DOMContentLoaded', function () {
         if(variablesOutput.textContent) hljs.highlightElement(variablesOutput);
         if(simulationOutput.textContent) hljs.highlightElement(simulationOutput);
     }
+
+    sendPromptBtn.addEventListener('click', sendPrompt);
+    promptInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendPrompt(); } });
+    clearChatBtn.addEventListener('click', clearChat);
+    attachFileBtn.addEventListener('click', () => fileAttachmentInput.click());
+    fileAttachmentInput.addEventListener('change', handleFileUpload);
+    downloadBtn.addEventListener('click', downloadCode);
+    copyCodeBtn.addEventListener('click', () => copyToClipboard(codeCanvas.value));
+    themeToggleBtn.addEventListener('click', toggleTheme);
+    helpBtn.addEventListener('click', showHelp);
+    tabs.forEach(tab => tab.addEventListener('click', () => switchTab(tab)));
+
+    loadHistory();
+    loadTheme();
 });
 
