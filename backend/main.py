@@ -87,9 +87,12 @@ def call_rag_service(prompt: str) -> list:
     # LUCCI'S FIX: The URL is now 'localhost' for local testing.
     # This will be changed back to 'rag_service' during the containerization step.
     rag_service_url = "http://rag_service:8001/query-kb"
+<<<<<<< HEAD
 =======
     rag_service_url = "http://localhost:8001/query-kb"
 >>>>>>> 5d04b08 (fp-1)
+=======
+>>>>>>> 182d9f7 (new fb-3)
     try:
         response = requests.post(rag_service_url, json={"prompt": prompt}, timeout=5)
         response.raise_for_status()
