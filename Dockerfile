@@ -7,9 +7,12 @@ WORKDIR /app
 # Copy the file that lists our Python dependencies
 COPY requirements.txt .
 
+<<<<<<< HEAD
 # Install curl for healthcheck
 RUN apt-get update && apt-get install -y curl
 
+=======
+>>>>>>> e0c4129 (Save my local changes)
 # Install the dependencies
 # --no-cache-dir makes the image smaller
 # --trusted-host is sometimes needed in corporate networks or CI/CD environments
@@ -20,7 +23,11 @@ COPY ./backend /app/backend
 
 # Copy the RAG knowledge base directory into the container
 # This is for the initial build. The volume will override this for live updates.
+<<<<<<< HEAD
 COPY ./rag_db /app/rag_db
+=======
+COPY ./rag_kb /app/rag_kb
+>>>>>>> e0c4129 (Save my local changes)
 
 # Copy the .env file for the API key
 COPY .env .

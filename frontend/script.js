@@ -142,6 +142,15 @@ document.addEventListener('DOMContentLoaded', function () {
         e.target.value = null;
     }
 
+    function loadTheme() {
+        const theme = localStorage.getItem('plcTheme');
+        if (theme === 'dark') {
+            document.body.classList.add('dark-mode');
+            document.body.classList.remove('light-mode');
+        }
+    }
+    
+    // --- 🛠️ UTILITIES ---
     function downloadCode() {
         const fileName = prompt("Enter the file name (e.g., 'motor_logic'):", "program");
         if (fileName === null || fileName.trim() === "") {
