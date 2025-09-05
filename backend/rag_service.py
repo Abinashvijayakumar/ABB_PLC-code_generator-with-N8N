@@ -21,6 +21,7 @@ print("✅ RAG database loaded successfully.")
 class Query(BaseModel):
     prompt: str
 
+
 @app.post("/query-kb")
 def query_knowledge_base(query: Query):
     try:
@@ -29,6 +30,10 @@ def query_knowledge_base(query: Query):
         return {"snippets": snippets}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to query knowledge base: {e}")
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8001)

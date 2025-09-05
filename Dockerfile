@@ -7,6 +7,9 @@ WORKDIR /app
 # Copy the file that lists our Python dependencies
 COPY requirements.txt .
 
+# Install curl for healthcheck
+RUN apt-get update && apt-get install -y curl
+
 # Install the dependencies
 # --no-cache-dir makes the image smaller
 # --trusted-host is sometimes needed in corporate networks or CI/CD environments
