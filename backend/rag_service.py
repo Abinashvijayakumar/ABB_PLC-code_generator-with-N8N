@@ -1,5 +1,8 @@
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> db27cbf (new rag)
 import os
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
@@ -58,6 +61,7 @@ def health():
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8001)
     
+<<<<<<< HEAD
 =======
 
 print("🧠 Loading existing RAG database...")
@@ -86,3 +90,5 @@ if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8001)
     
 >>>>>>> 5d04b08 (fp-1)
+=======
+>>>>>>> db27cbf (new rag)

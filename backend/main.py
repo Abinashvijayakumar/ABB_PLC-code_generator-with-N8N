@@ -20,7 +20,6 @@ try:
 except Exception as e:
     print(f"❌ Error configuring SDK: {e}"); exit()
 
-<<<<<<< HEAD
 # --- 2. PROMPT ENGINEERING (Definitive v10.0) ---
 SYSTEM_PROMPT = """
 You are a world-class PLC programming architect and AI assistant. Your purpose is to generate flawless, professional-grade, and universally compatible IEC 61131-3 Structured Text. You are logical, precise, and follow all instructions perfectly.
@@ -32,17 +31,6 @@ You are a world-class PLC programming architect and AI assistant. Your purpose i
 4.  **Universal Code Mandate**: All generated PLC code must be universally compatible.
     - **FORBIDDEN FUNCTIONS**: You are strictly forbidden from using any pre-built timer or counter function blocks (TON, TOF, TP, CTU, CTD).
     - **REQUIRED TIMER/COUNTER PATTERN**: All time-based or event-counting logic MUST be implemented manually using integer variables. For timers, assume a 100ms scan cycle (e.g., 5 seconds = 50 cycles). This is a non-negotiable requirement for the target compiler.
-=======
-# --- 2. PROMPT ENGINEERING (Definitive v9.0) ---
-SYSTEM_PROMPT = """You are an expert-level PLC programming assistant. You are a precise, logical, and helpful AI that follows instructions perfectly.
-
-<SYSTEM_RULES>
-1.  **Analyze Intent**: Your first task is to determine if the user's request is for a "chat" or to "generate_code".
-2.  **Strict JSON Output**: Your entire response MUST be a single, valid JSON object. Do not include any conversational text, markdown, apologies, or explanations outside of the JSON structure. This is an unbreakable rule.
-3.  **Universal Code Mandate**: All generated PLC code must be universally compatible IEC 61131-3 Structured Text.
-    - **FORBIDDEN FUNCTIONS**: You are strictly forbidden from using any pre-built timer function blocks like TON, TOF, or TP.
-    - **REQUIRED TIMER PATTERN**: For ALL time-based logic, you MUST ONLY use a manual integer counter pattern. Assume a 100ms scan cycle (5 seconds = 50 cycles).
->>>>>>> 5d04b08 (fp-1)
 </SYSTEM_RULES>
 
 <OUTPUT_FORMATS>
@@ -50,28 +38,16 @@ SYSTEM_PROMPT = """You are an expert-level PLC programming assistant. You are a 
 -   **For "generate_code" intent**: Respond with this exact 6-key JSON structure:
     {
         "response_type": "plc_code",
-<<<<<<< HEAD
         "explanation": "A brief but professional description of the implemented logic and its operation.",
         "required_variables": "The complete VAR/END_VAR block, with clear, descriptive variable names.",
         "structured_text": "The fully commented, executable Structured Text logic. The code must be clean, efficient, and robust.",
         "verification_notes": "A professional review of the code, checking for potential race conditions, unsafe states, or edge cases.",
         "simulation_trace": "A step-by-step execution trace for a typical use case, showing how variable states change."
-=======
-        "explanation": "A brief description of the logic.",
-        "required_variables": "The complete VAR/END_VAR block.",
-        "structured_text": "The executable Structured Text logic.",
-        "verification_notes": "Your safety and logic review.",
-        "simulation_trace": "A step-by-step execution trace."
->>>>>>> 5d04b08 (fp-1)
     }
 </OUTPUT_FORMATS>
 """
 
-<<<<<<< HEAD
 SELF_CORRECTION_PROMPT = """You are a PLC Syntax and Compatibility Reviewer. Review the provided JSON. Check the `structured_text` for any syntax errors or violations of the Universal Compatibility Guide (especially the manual timer/counter rule). Your only output must be the complete, corrected 6-key JSON object."""
-=======
-SELF_CORRECTION_PROMPT = """You are a PLC Syntax and Compatibility Reviewer. Review the provided JSON. Check the `structured_text` for any syntax errors or violations of the Universal Compatibility Guide (especially the manual timer rule). Your only output must be the complete, corrected 6-key JSON object."""
->>>>>>> 5d04b08 (fp-1)
 
 USER_PROMPT_TEMPLATE = "<USER_REQUEST>{{ USER_PROMPT_GOES_HERE }}</USER_REQUEST>"
 
@@ -83,16 +59,10 @@ class Prompt(BaseModel): prompt: str
 
 # --- 4. HELPER FUNCTIONS ---
 def call_rag_service(prompt: str) -> list:
-<<<<<<< HEAD
     # LUCCI'S FIX: The URL is now 'localhost' for local testing.
     # This will be changed back to 'rag_service' during the containerization step.
     rag_service_url = "http://rag_service:8001/query-kb"
-<<<<<<< HEAD
-=======
-    rag_service_url = "http://localhost:8001/query-kb"
->>>>>>> 5d04b08 (fp-1)
-=======
->>>>>>> 182d9f7 (new fb-3)
+    rag_service_url = "http://rag_service:8001/query-kb"
     try:
         response = requests.post(rag_service_url, json={"prompt": prompt}, timeout=5)
         response.raise_for_status()
@@ -121,10 +91,7 @@ def generate_and_verify_endpoint(prompt: Prompt):
     rag_context = "\n\n".join(rag_snippets)
     user_prompt = USER_PROMPT_TEMPLATE.replace("{{ USER_PROMPT_GOES_HERE }}", prompt.prompt)
     if rag_context:
-<<<<<<< HEAD
         print("✅ RAG context found. Injecting into prompt.")
-=======
->>>>>>> 5d04b08 (fp-1)
         user_prompt += f"\n\n<CONTEXT_FROM_KNOWLEDGE_BASE>{rag_context}</CONTEXT_FROM_KNOWLEDGE_BASE>"
     
     print("1. Calling LLM for initial generation...")
