@@ -1,6 +1,11 @@
 PLC Co-pilot: AI-Powered Industrial Automation Assistant
 An advanced AI assistant designed to accelerate industrial automation by generating, verifying, and explaining IEC 61131-3 Structured Text code. This tool acts as an intelligent partner for PLC programmers and automation engineers.
 
+## 🌐 Try the Demo
+**Live Demo:** [https://Abinashvijayakumar.github.io/ABB_PLC-code_generator-with-N8N](https://Abinashvijayakumar.github.io/ABB_PLC-code_generator-with-N8N)
+
+Experience the PLC Co-pilot interface with sample responses that demonstrate the complete workflow from natural language input to generated PLC code. The demo showcases realistic examples including start/stop motor controls, timer implementations, and more.
+
 🚀 Key Features
 Advanced AI Code Generation: Leverages Google's Gemini models to translate natural language descriptions into high-quality, universally compatible Structured Text.
 

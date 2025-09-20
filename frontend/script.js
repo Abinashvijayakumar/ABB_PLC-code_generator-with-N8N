@@ -100,7 +100,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // --- 💾 HISTORY & THEME ---
     function addMessage(type, content) {
-        const sanitizedContent = DOMPurify.sanitize(content);
+        // Sanitize content with fallback if DOMPurify is not available
+        const sanitizedContent = (typeof DOMPurify !== 'undefined') 
+            ? DOMPurify.sanitize(content)
+            : content.replace(/</g, '&lt;').replace(/>/g, '&gt;'); // Basic HTML escaping
+            
         const messageDiv = document.createElement('div');
         messageDiv.className = type === 'user' ? 'user-message' : 'system-message';
         messageDiv.innerHTML = `<p>${sanitizedContent.replace(/\n/g, '<br>')}</p>`;

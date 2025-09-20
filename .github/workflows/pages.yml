@@ -28,15 +28,26 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v4
         
-      - name: Copy frontend files to root
+      - name: Prepare GitHub Pages files
         run: |
-          cp frontend/* .
-          ls -la
+          # Create a clean directory for Pages deployment
+          mkdir -p pages-deploy
+          
+          # Copy only frontend files
+          cp frontend/index.html pages-deploy/
+          cp frontend/script.js pages-deploy/
+          cp frontend/styles.css pages-deploy/
+          
+          # Copy documentation
+          cp README.md pages-deploy/
+          
+          echo "Files prepared for GitHub Pages:"
+          ls -la pages-deploy/
           
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: '.'
+          path: './pages-deploy'
           
       - name: Deploy to GitHub Pages
         id: deployment
