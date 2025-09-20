@@ -57,6 +57,33 @@ body {
 .header { display: flex; justify-content: space-between; align-items: center; padding: var(--spacing-sm) var(--spacing-md); background-color: var(--card-bg); border-bottom: 1px solid var(--border-color); }
 .logo h1 { font-size: 1.5rem; display: flex; align-items: center; gap: var(--spacing-sm); color: var(--primary-color); }
 .header-controls { display: flex; gap: var(--spacing-sm); }
+
+/* Demo Banner */
+.demo-banner {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 0.5rem 0;
+    text-align: center;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.demo-banner-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.demo-banner a {
+    color: #ffd700;
+    text-decoration: underline;
+}
+
+.demo-banner a:hover {
+    color: white;
+}
+
 .main-content { display: grid; grid-template-columns: 1fr 1fr; flex: 1; overflow: hidden; }
 
 .prompt-section, .output-section { display: flex; flex-direction: column; padding: var(--spacing-md); gap: var(--spacing-md); overflow: hidden; }
