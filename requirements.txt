@@ -14,10 +14,6 @@ sentence-transformers
 # For making requests between services
 requests
 langchain-community
-<<<<<<< HEAD
 pypdf
 langchain-huggingface
 langchain-chroma
-=======
-pypdf
->>>>>>> e0c4129 (Save my local changes)

@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 version: '3.8'
 
 # LUCCI'S FIX: Define a dedicated network for all our services to guarantee they can find each other.
@@ -8,10 +7,6 @@ networks:
 
 services:
   # The Main Orchestrator Service (main.py)
-=======
-
-services:
->>>>>>> e0c4129 (Save my local changes)
   orchestrator:
     build:
       context: .

@@ -1,6 +1,5 @@
 import os
 import json
-import time
 import requests
 import uvicorn
 import time
@@ -62,13 +61,12 @@ def call_rag_service(prompt: str) -> list:
     # LUCCI'S FIX: The URL is now 'localhost' for local testing.
     # This will be changed back to 'rag_service' during the containerization step.
     rag_service_url = "http://rag_service:8001/query-kb"
-    rag_service_url = "http://rag_service:8001/query-kb"
     try:
         response = requests.post(rag_service_url, json={"prompt": prompt}, timeout=5)
         response.raise_for_status()
         return response.json().get("snippets", [])
     except requests.exceptions.RequestException as e:
-        print(f"⚠️ WARNING: Could not connect to RAG service: {e}. Proceeding without RAG.")
+        print(f"⚠️ WARNING: Could not connect to RAG service at {rag_service_url}: {e}. Proceeding without RAG.")
         return []
 
 def generate_from_llm(user_prompt: str, is_correction=False) -> dict:
